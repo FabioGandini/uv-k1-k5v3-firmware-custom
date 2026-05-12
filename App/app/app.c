@@ -210,6 +210,8 @@ static void ScreenSaverRenderMatrix(bool reset)
 static bool ScreenSaverCanDisplay(void)
 {
     if (gSetting_set_sav == SET_SAV_OFF ||
+        gEeprom.BACKLIGHT_TIME == 0 ||
+        gEeprom.BACKLIGHT_TIME >= 61 ||
         gScreenSaverDisplayed ||
         gCurrentFunction == FUNCTION_TRANSMIT ||
         FUNCTION_IsRx() ||
@@ -2011,6 +2013,7 @@ void APP_TimeSlice500ms(void)
 
 #ifdef ENABLE_FEAT_F4HWN_LOGO_SAV
     if (gBacklightCountdown_500ms == 0 &&
+        gEeprom.BACKLIGHT_TIME > 0 &&
         gEeprom.BACKLIGHT_TIME < 61 &&
         !gAskToSave &&
         !gCssBackgroundScan)
