@@ -88,6 +88,10 @@ static bool flagSaveVfo;
 static bool flagSaveSettings;
 static bool flagSaveChannel;
 
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+static KEY_Code_t gSleepWakeKey = KEY_INVALID;
+#endif
+
 #ifdef ENABLE_FEAT_F4HWN_LOGO_SAV
 static bool gScreenSaverDisplayed;
 static uint8_t gScreenSaverTick;
@@ -1838,9 +1842,14 @@ void APP_TimeSlice500ms(void)
     if (gSleepModeCountdown_500ms == gSetting_set_off * 120 && gWakeUp) {
         //ST7565_Init();
         ST7565_FixInterfGlitch();
+#ifdef ENABLE_FEAT_F4HWN_LOGO_SAV
+        ScreenSaverExit();
+#endif
         BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, false);
         gPowerSave_10ms = gEeprom.BATTERY_SAVE * 10;
         gWakeUp = false;
+        gUpdateDisplay = true;
+        gUpdateStatus = true;
     }
 
     if(gCurrentFunction != FUNCTION_TRANSMIT && !FUNCTION_IsRx()
@@ -2085,24 +2094,35 @@ static void ALARM_Off(void)
 
 static void ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 {
-    #ifdef ENABLE_FEAT_F4HWN_SLEEP
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    if (gSleepWakeKey != KEY_INVALID) {
+        if (Key == gSleepWakeKey && !bKeyPressed)
+            gSleepWakeKey = KEY_INVALID;
+        return;
+    }
+
     if(gWakeUp)
     {
-        if(!bKeyPressed || Key == KEY_PTT)
+        if(bKeyPressed || Key == KEY_PTT)
         {
+#ifdef ENABLE_FEAT_F4HWN_LOGO_SAV
+            ScreenSaverExit();
+#endif
             BACKLIGHT_TurnOn();
 
             if(Key != KEY_PTT)
             {
-                Key = KEY_INVALID;
+                gSleepWakeKey = Key;
+                gBeepToPlay = BEEP_NONE;
+                return;
             }
         }
-        else
+        else if(Key != KEY_PTT)
         {
-            return;
+            Key = KEY_INVALID;
         }
     }
-    #endif
+#endif
 
 #ifdef ENABLE_FEAT_F4HWN_LOGO_SAV
     if (gScreenSaverWakeKey != KEY_INVALID) {
