@@ -66,7 +66,7 @@ void UI_DisplayStatus()
 
     char str[8] = "";
 
-#ifdef ENABLE_FEAT_F4HWN_RX_TX_TIMER
+#if defined(ENABLE_FEAT_F4HWN_RX_TX_TIMER) && !defined(ENABLE_FEAT_F4HWN_DEBUG)
     bool isTransmit = gCurrentFunction == FUNCTION_TRANSMIT;
     if (gSetting_set_tmr && (isTransmit || FUNCTION_IsRx())) {
         convertTime(line, !isTransmit);
@@ -210,7 +210,7 @@ void UI_DisplayStatus()
         x += sizeof(gFontDWR) + 3;
     #endif
 
-#ifdef ENABLE_FEAT_F4HWN_RX_TX_TIMER
+#if defined(ENABLE_FEAT_F4HWN_RX_TX_TIMER) && !defined(ENABLE_FEAT_F4HWN_DEBUG)
     }
 #endif
 
