@@ -316,14 +316,14 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
                 bool isKeyUp = (Key == KEY_UP);
 
                 if (gScanStateDir != SCAN_OFF) {
-                    RADIO_NextValidList(isKeyUp ? 1 : -1);
+                    RADIO_NextValidList(isKeyUp ? -1 : 1);
                     UI_MAIN_NotifyScanProgressDataChanged();
                 } else {
                     // Adjust squelch: UP increments, DOWN decrements
                     if (gSquelchLevelOriginal == 10)
                         gSquelchLevelOriginal =  gEeprom.SQUELCH_LEVEL;
 
-                    if (isKeyUp) {
+                    if (!isKeyUp) {
                         if (gEeprom.SQUELCH_LEVEL < 9) gEeprom.SQUELCH_LEVEL++;
                     } else {
                         if (gEeprom.SQUELCH_LEVEL > 0) gEeprom.SQUELCH_LEVEL--;
@@ -1067,7 +1067,7 @@ void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             break;
         case KEY_UP:
         case KEY_DOWN:
-            MAIN_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? 1 : -1);
+            MAIN_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? -1 : 1);
             break;
         case KEY_EXIT:
             MAIN_Key_EXIT(bKeyPressed, bKeyHeld);

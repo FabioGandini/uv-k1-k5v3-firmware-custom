@@ -579,7 +579,7 @@ void FM_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             break;
         case KEY_UP:
         case KEY_DOWN:
-            Key_UP_DOWN(state, Key == KEY_UP ? 1 : -1);
+            Key_UP_DOWN(state, Key == KEY_UP ? -1 : 1);
             break;
         case KEY_EXIT:
             Key_EXIT(state);

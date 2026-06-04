@@ -413,7 +413,7 @@ void AIRCOPY_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         break;
     case KEY_UP:
     case KEY_DOWN:
-        AIRCOPY_Key_UP_DOWN(Key == KEY_UP ? 1 : -1);
+        AIRCOPY_Key_UP_DOWN(Key == KEY_UP ? -1 : 1);
         break;
     case KEY_PTT:
         break;
