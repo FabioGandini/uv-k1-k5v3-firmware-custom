@@ -86,6 +86,10 @@ uint8_t gMsgDebugFinishedCount;
 #define MSG_RX_TIMEOUT_10MS 100  // 1 second
 uint8_t gMsgRxTimeout10ms;
 
+// deferred ACK: armed by MSG_HandleReceive, fired from the 10ms tick so
+// the received message is drawn before the radio keys up for the reply
+uint8_t gMsgAckCountdown10ms;
+
 uint8_t hasNewMessage = 0;
 
 uint8_t keyTickCounter = 0;
@@ -387,6 +391,10 @@ void MSG_CheckRxTimeout(void) {
 		gMsgDebug0BDiff |= (uint16_t)(now0B ^ baseline0B);
 	}
 
+	// deferred ACK transmission (see MSG_HandleReceive)
+	if (gMsgAckCountdown10ms && --gMsgAckCountdown10ms == 0)
+		MSG_SendAck();
+
 	// BK4829 quirk: many code paths (squelch setup, beeps, tones) leave the
 	// AF path on AF_MUTE, which also silences the FM demod feeding the FSK
 	// slicer - the modem then misses every packet until something reopens
@@ -494,15 +502,15 @@ void MSG_HandleReceive(){
 		}
 	}
 
-	// Transmit a message to the sender that we have received the message
+	// Reply with an ACK after a delay so the correspondent radio can get
+	// back to RX. Scheduled on the 10ms tick instead of blocking here:
+	// a 700ms delay + full TX inside the interrupt-processing path froze
+	// the UI before the received message was even drawn
 	if (dataPacket.data.header == MESSAGE_PACKET ||
 		dataPacket.data.header == ENCRYPTED_MESSAGE_PACKET)
 	{
-		// wait so the correspondent radio can properly receive it
-		SYSTEM_DelayMs(700);
-
 		if(gEeprom.MESSENGER_CONFIG.data.ack)
-			MSG_SendAck();
+			gMsgAckCountdown10ms = 70;  // 700ms
 	}
 }
 
