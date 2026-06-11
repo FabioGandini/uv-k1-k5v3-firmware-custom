@@ -23,6 +23,7 @@
 
 #include <string.h>
 #include "app/messenger.h"
+#include "driver/bk4819.h"
 #include "driver/st7565.h"
 #include "functions.h"
 #include "external/printf/printf.h"
@@ -88,11 +89,20 @@ void UI_DisplayMSG(void) {
 	//UI_PrintStringSmallNormal(String, 3, 0, 6);
 	GUI_DisplaySmallest(String, 5, 48, false, true);
 
-	// debug msg (FSK interrupt counters, no UART needed)
+	// debug msg: live FSK register dump (no UART needed)
+	// R = MsgRX setting, Y/E = sync/finished interrupt counters, then the
+	// actual chip state: REG_3F (irq mask), REG_58 (FSK mode/enable),
+	// REG_59 (RX enable bit12), REG_70 (Tone2 gain)
 	// NOTE: gFrameBuffer is only 7 rows tall (y must be 0-55), so this
 	// must fit on the single free row at y=42 (x>=14)
 	memset(String, 0, sizeof(String));
-	sprintf(String, "S%uY%uF%uE%uQ%uG%u%04X", msgStatus, gMsgDebugSyncCount, gMsgDebugFifoCount, gMsgDebugFinishedCount, g_SquelchLost, gCurrentFunction, gMsgDebugLastBits);
+	sprintf(String, "R%uY%uE%u %04X %04X %04X %04X",
+		gEeprom.MESSENGER_CONFIG.data.receive,
+		gMsgDebugSyncCount, gMsgDebugFinishedCount,
+		BK4819_ReadRegister(BK4819_REG_3F),
+		BK4819_ReadRegister(BK4819_REG_58),
+		BK4819_ReadRegister(BK4819_REG_59),
+		BK4819_ReadRegister(BK4819_REG_70));
 	GUI_DisplaySmallest(String, 14, 42, false, true);
 
 	ST7565_BlitFullScreen();
