@@ -932,10 +932,6 @@ static void MAIN_Key_STAR(bool bKeyPressed, bool bKeyHeld)
 
 static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
 {
-    if (!gEeprom.SET_NAV) {
-        Direction = -Direction;
-    }
-
 #ifdef ENABLE_FEAT_F4HWN // Set Squelch F + UP or Down
     if(gWasFKeyPressed) {
         processFKeyFunction(Direction == 1 ? KEY_UP : KEY_DOWN, true);

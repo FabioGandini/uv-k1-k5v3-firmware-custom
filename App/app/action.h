@@ -52,6 +52,10 @@ void ACTION_SwitchDemodul(void);
     #endif
 #endif
 
+#ifdef ENABLE_MESSENGER
+    void ACTION_Messenger(void);
+#endif
+
 void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld);
 
 #endif

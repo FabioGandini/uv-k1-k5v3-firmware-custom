@@ -15,3 +15,5 @@ k5_eeprom.raw
 __pycache__/
 
 .DS_Store
+.aider*
+*.tmp

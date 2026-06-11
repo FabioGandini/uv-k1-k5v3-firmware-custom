@@ -23,6 +23,9 @@
 #include "app/generic.h"
 #include "app/menu.h"
 #include "app/scanner.h"
+#ifdef ENABLE_MESSENGER
+    #include "app/messenger.h"
+#endif
 #include "audio.h"
 #include "board.h"
 #include "driver/backlight.h"
@@ -484,6 +487,16 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             *pMax = vol_max;
             break;
         }
+
+#ifdef ENABLE_MESSENGER
+        case MENU_MSG_RX:
+        case MENU_MSG_ACK:
+            *pMax = 1;
+            break;
+        case MENU_MSG_MOD:
+            *pMax = 2;
+            break;
+#endif
 
         default:
             return -1;
@@ -1035,6 +1048,19 @@ void MENU_AcceptSetting(void)
             gRequestSaveChannel       = 1;
             return;
 #endif
+
+#ifdef ENABLE_MESSENGER
+        case MENU_MSG_RX:
+            gEeprom.MESSENGER_CONFIG.data.receive = gSubMenuSelection;
+            MSG_EnableRX(gEeprom.MESSENGER_CONFIG.data.receive);
+            break;
+        case MENU_MSG_ACK:
+            gEeprom.MESSENGER_CONFIG.data.ack = gSubMenuSelection;
+            break;
+        case MENU_MSG_MOD:
+            gEeprom.MESSENGER_CONFIG.data.modulation = gSubMenuSelection;
+            break;
+#endif
     }
 
     gRequestSaveSettings = true;
@@ -1499,6 +1525,18 @@ void MENU_ShowCurrentSetting(void)
             break;
         case MENU_TX_LOCK:
             gSubMenuSelection = gTxVfo->TX_LOCK;
+            break;
+#endif
+
+#ifdef ENABLE_MESSENGER
+        case MENU_MSG_RX:
+            gSubMenuSelection = gEeprom.MESSENGER_CONFIG.data.receive;
+            break;
+        case MENU_MSG_ACK:
+            gSubMenuSelection = gEeprom.MESSENGER_CONFIG.data.ack;
+            break;
+        case MENU_MSG_MOD:
+            gSubMenuSelection = gEeprom.MESSENGER_CONFIG.data.modulation;
             break;
 #endif
 

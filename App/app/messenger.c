@@ -72,6 +72,18 @@ union DataPacket dataPacket;
 
 uint16_t gErrorsDuringMSG;
 
+// on-screen FSK interrupt debug counters (no UART needed)
+uint16_t gMsgDebugLastBits;
+uint8_t gMsgDebugSyncCount;
+uint8_t gMsgDebugFifoCount;
+uint8_t gMsgDebugFinishedCount;
+
+// recovery watchdog: if FSK_RX_SYNC fires but FSK_RX_FINISHED never
+// follows (demod gets stuck mid-packet), force the FSK RX path back
+// to idle after MSG_RX_TIMEOUT_10MS so the squelch doesn't stay open
+#define MSG_RX_TIMEOUT_10MS 100  // 1 second
+uint8_t gMsgRxTimeout10ms;
+
 uint8_t hasNewMessage = 0;
 
 uint8_t keyTickCounter = 0;
@@ -290,7 +302,14 @@ void MSG_StorePacket(const uint16_t interrupt_bits) {
 	const bool rx_fifo_almost_full = (interrupt_bits & BK4819_REG_02_FSK_FIFO_ALMOST_FULL) ? true : false;
 	const bool rx_finished         = (interrupt_bits & BK4819_REG_02_FSK_RX_FINISHED) ? true : false;
 
-	//UART_printf("\nMSG : S%i, F%i, E%i | %i", rx_sync, rx_fifo_almost_full, rx_finished, interrupt_bits);
+	gMsgDebugLastBits = interrupt_bits;
+	if (rx_sync)             gMsgDebugSyncCount++;
+	if (rx_fifo_almost_full) gMsgDebugFifoCount++;
+	if (rx_finished)         gMsgDebugFinishedCount++;
+
+#ifdef ENABLE_UART
+	printf("\nMSG : S%i, F%i, E%i | %i", rx_sync, rx_fifo_almost_full, rx_finished, gFSKWriteIndex);
+#endif
 
 	if (rx_sync) {
 		#ifdef ENABLE_MESSENGER_FSK_MUTE
@@ -302,6 +321,7 @@ void MSG_StorePacket(const uint16_t interrupt_bits) {
 		gFSKWriteIndex = 0;
 		MSG_ClearPacketBuffer();
 		msgStatus = RECEIVING;
+		gMsgRxTimeout10ms = 0;
 	}
 
 	if (rx_fifo_almost_full && msgStatus == RECEIVING) {
@@ -322,14 +342,39 @@ void MSG_StorePacket(const uint16_t interrupt_bits) {
 	if (rx_finished) {
 		// turn off green LED
 		BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
+		g_SquelchLost = false;
 		BK4819_FskClearFifo();
 		BK4819_FskEnableRx();
 		msgStatus = READY;
+		gMsgRxTimeout10ms = 0;
 
 		if (gFSKWriteIndex > 2) {
 			MSG_HandleReceive();
 		}
 		gFSKWriteIndex = 0;
+	}
+}
+
+// called every 10ms from CheckRadioInterrupts(); recovers from a stuck
+// FSK reception (sync detected but FSK_RX_FINISHED never arrives), which
+// otherwise leaves msgStatus == RECEIVING and the squelch open forever
+void MSG_CheckRxTimeout(void) {
+	if (msgStatus != RECEIVING) {
+		gMsgRxTimeout10ms = 0;
+		return;
+	}
+
+	if (++gMsgRxTimeout10ms > MSG_RX_TIMEOUT_10MS) {
+		gMsgRxTimeout10ms = 0;
+		msgStatus = READY;
+		gFSKWriteIndex = 0;
+		BK4819_FskClearFifo();
+		BK4819_FskEnableRx();
+
+		if (g_SquelchLost) {
+			g_SquelchLost = false;
+			BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
+		}
 	}
 }
 
@@ -345,6 +390,7 @@ void MSG_Init() {
 	#ifdef ENABLE_ENCRYPTION
 		gRecalculateEncKey = true;
 	#endif
+	MSG_EnableRX(gEeprom.MESSENGER_CONFIG.data.receive);
 }
 
 void MSG_SendAck() {

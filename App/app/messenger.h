@@ -46,11 +46,19 @@ extern char rxMessage[4][PAYLOAD_LENGTH + 2];
 extern uint8_t hasNewMessage;
 extern uint8_t keyTickCounter;
 
+// on-screen FSK interrupt debug counters (no UART needed)
+extern uint16_t gMsgDebugLastBits;
+extern uint8_t gMsgDebugSyncCount;
+extern uint8_t gMsgDebugFifoCount;
+extern uint8_t gMsgDebugFinishedCount;
+
 typedef enum MsgStatus {
     READY,
     SENDING,
     RECEIVING,
 } MsgStatus;
+
+extern MsgStatus msgStatus;
 
 typedef enum PacketType {
     MESSAGE_PACKET = 100u,
@@ -95,6 +103,7 @@ typedef union {
 
 void MSG_EnableRX(const bool enable);
 void MSG_StorePacket(const uint16_t interrupt_bits);
+void MSG_CheckRxTimeout(void);
 void MSG_Init();
 void MSG_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld);
 void MSG_SendPacket();

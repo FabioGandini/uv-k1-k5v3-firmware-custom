@@ -172,6 +172,11 @@ const t_menu_item MenuList[] =
     {"SetScn",      MENU_SET_SCN       },
 #endif
 #endif
+#ifdef ENABLE_MESSENGER
+    {"MsgRX",       MENU_MSG_RX        },
+    {"MsgACK",      MENU_MSG_ACK       },
+    {"MsgMod",      MENU_MSG_MOD       },
+#endif
     // hidden menu items from here on
     // enabled if pressing both the PTT and upper side button at power-on
     {"F Lock",      MENU_F_LOCK        },
@@ -359,6 +364,15 @@ const char gSubMenu_BATTYP[][12] =
     "2500mAh K1"
 };
 
+#ifdef ENABLE_MESSENGER
+const char gSubMenu_MSG_MOD[3][9] =
+{
+    "FSK 450",
+    "FSK 700",
+    "AFSK1200",
+};
+#endif
+
 const char gSubMenu_SET_NAV[][17] =
 {
     "LEFT\nRIGHT\nUV-K1",
@@ -514,6 +528,9 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
     #ifdef ENABLE_FEAT_F4HWN_BEAM
         {"BEAM",            ACTION_OPT_BEAM},
     #endif
+#endif
+#ifdef ENABLE_MESSENGER
+    {"MESSENGER",       ACTION_OPT_MESSENGER},
 #endif
 };
 
@@ -1420,10 +1437,19 @@ void UI_DisplayMenu(void)
         #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
             case MENU_SET_KEY:
                 strcpy(String, gSubMenu_SET_KEY[gSubMenuSelection]);
-                break;                
+                break;
         #endif
 #endif
 
+#ifdef ENABLE_MESSENGER
+        case MENU_MSG_RX:
+        case MENU_MSG_ACK:
+            strcpy(String, gSubMenu_OFF_ON[gSubMenuSelection]);
+            break;
+        case MENU_MSG_MOD:
+            strcpy(String, gSubMenu_MSG_MOD[gSubMenuSelection]);
+            break;
+#endif
     }
 
     //#if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)

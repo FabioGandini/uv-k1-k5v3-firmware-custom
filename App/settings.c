@@ -454,6 +454,9 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
         // 1FF0..0x1FF7
         // TODO: address TBD
         PY25Q16_ReadBuffer(0x00A158, Data, 8);
+#ifdef ENABLE_MESSENGER
+        gEeprom.MESSENGER_CONFIG.__val = (Data[0] == 0xFF) ? 0x01 : Data[0];
+#endif
         const uint8_t set_ptt_scn = Data[7] & 0x0F;
         gSetting_set_pwr = (((Data[7] & 0xF0) >> 4) < 7) ? ((Data[7] & 0xF0) >> 4) : 0;
         gSetting_set_ptt = (set_ptt_scn < 4) ? (set_ptt_scn & 0x01) : 0;
@@ -1097,6 +1100,10 @@ void SETTINGS_SaveSettings(void)
     PY25Q16_ReadBuffer(0x00A158, State, 8);
 
     //memset(State, 0xFF, sizeof(State));
+
+#ifdef ENABLE_MESSENGER
+    State[0] = gEeprom.MESSENGER_CONFIG.__val;
+#endif
 
     /*
     tmp = 0;

@@ -48,6 +48,9 @@
 #ifdef ENABLE_FEAT_F4HWN_BEAM
     #include "app/beam.h"
 #endif
+#ifdef ENABLE_MESSENGER
+    #include "app/messenger.h"
+#endif
 
 #if defined(ENABLE_FMRADIO)
 static void ACTION_Scan_FM(bool bRestart);
@@ -137,6 +140,9 @@ void (*action_opt_table[])(void) = {
 #endif
 #ifdef ENABLE_FEAT_F4HWN_BEAM
     [ACTION_OPT_BEAM] = &ACTION_Beam,
+#endif
+#ifdef ENABLE_MESSENGER
+    [ACTION_OPT_MESSENGER] = &ACTION_Messenger,
 #endif
 };
 
@@ -682,4 +688,11 @@ void ACTION_Remove_Offset(void)
     ACTION_ToggleVfoSetting(&gRemoveOffset);
 }
 #endif
+#endif
+
+#ifdef ENABLE_MESSENGER
+void ACTION_Messenger(void)
+{
+    GUI_SelectNextDisplay(DISPLAY_MSG);
+}
 #endif

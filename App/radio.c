@@ -22,6 +22,9 @@
 #ifdef ENABLE_FMRADIO
     #include "app/fm.h"
 #endif
+#ifdef ENABLE_MESSENGER
+    #include "app/messenger.h"
+#endif
 #include "audio.h"
 #include "dcs.h"
 #include "driver/bk4819.h"
@@ -919,6 +922,19 @@ void RADIO_SetupRegisters(bool switchToForeground)
 
     BK4819_EnableDTMF();
     InterruptMask |= BK4819_REG_3F_DTMF_5TONE_FOUND;
+
+#ifdef ENABLE_MESSENGER
+    if (gEeprom.MESSENGER_CONFIG.data.receive) {
+        // re-apply the FSK config (REG_58/59/70/72/5A..5E): earlier in this
+        // function BK4819_SetupSquelch() zeroes REG_70, which kills the
+        // Tone2/FSK demodulator reference and breaks messenger RX
+        MSG_EnableRX(true);
+        InterruptMask |= BK4819_REG_3F_FSK_RX_SYNC
+                       | BK4819_REG_3F_FSK_FIFO_ALMOST_FULL
+                       | BK4819_REG_3F_FSK_RX_FINISHED
+                       | BK4819_REG_3F_FSK_TX_FINISHED;
+    }
+#endif
 
     RADIO_SetupAGC(gRxVfo->Modulation == MODULATION_AM, false);
     //RADIO_SetupAGC(false, false);

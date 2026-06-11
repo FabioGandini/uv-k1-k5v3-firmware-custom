@@ -163,7 +163,12 @@ enum
     MENU_F2SHRT,
     MENU_F2LONG,
     MENU_MLONG,
-    MENU_BATTYP
+    MENU_BATTYP,
+#ifdef ENABLE_MESSENGER
+    MENU_MSG_RX,
+    MENU_MSG_ACK,
+    MENU_MSG_MOD,
+#endif
 };
 
 extern const uint8_t FIRST_HIDDEN_MENU_ITEM;
@@ -225,6 +230,9 @@ extern const char* const gSubMenu_F_LOCK[F_LOCK_LEN];
 extern const char        gSubMenu_RX_TX[4][6];
 extern const char        gSubMenu_BAT_TXT[3][8];
 extern const char        gSubMenu_BATTYP[5][12];
+#ifdef ENABLE_MESSENGER
+    extern const char    gSubMenu_MSG_MOD[3][9];
+#endif
 
 #ifndef ENABLE_FEAT_F4HWN
     extern const char        gSubMenu_SCRAMBLER[11][7];

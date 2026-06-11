@@ -24,6 +24,7 @@
 #include <string.h>
 #include "app/messenger.h"
 #include "driver/st7565.h"
+#include "functions.h"
 #include "external/printf/printf.h"
 #include "misc.h"
 #include "settings.h"
@@ -87,17 +88,12 @@ void UI_DisplayMSG(void) {
 	//UI_PrintStringSmallNormal(String, 3, 0, 6);
 	GUI_DisplaySmallest(String, 5, 48, false, true);
 
-	// debug msg
-	/*memset(String, 0, sizeof(String));
-	sprintf(String, "S:%u", gErrorsDuringMSG);
-	GUI_DisplaySmallest(String, 4, 12, false, true);
-
+	// debug msg (FSK interrupt counters, no UART needed)
+	// NOTE: gFrameBuffer is only 7 rows tall (y must be 0-55), so this
+	// must fit on the single free row at y=42 (x>=14)
 	memset(String, 0, sizeof(String));
-	for (uint8_t i = 0; i < 19; i++) {
-		sprintf(&String[i*2], "%02X", rxMessage[i]);
-	}
-	
-	GUI_DisplaySmallest(String, 20, 34, false, true);*/
+	sprintf(String, "S%uY%uF%uE%uQ%uG%u%04X", msgStatus, gMsgDebugSyncCount, gMsgDebugFifoCount, gMsgDebugFinishedCount, g_SquelchLost, gCurrentFunction, gMsgDebugLastBits);
+	GUI_DisplaySmallest(String, 14, 42, false, true);
 
 	ST7565_BlitFullScreen();
 }

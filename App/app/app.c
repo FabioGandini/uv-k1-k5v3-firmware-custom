@@ -668,10 +668,10 @@ static void CheckRadioInterrupts(void)
     if (SCANNER_IsScanning())
         return;
 
-    while (BK4819_ReadRegister(BK4819_REG_0C) & 1u) { // BK chip interrupt request
-        // clear interrupts
-        BK4819_WriteRegister(BK4819_REG_02, 0);
-        // fetch interrupt status bits
+    // bounded: if REG_02 stays asserted (e.g. a level-triggered sqlLost while
+    // RSSI remains above threshold), don't freeze the whole main loop forever -
+    // bail out and retry on the next 10ms tick
+    for (uint8_t loopGuard = 0; (loopGuard < 16) && (BK4819_ReadRegister(BK4819_REG_0C) & 1u); loopGuard++) { // BK chip interrupt request
 
         union {
             struct {
@@ -695,7 +695,12 @@ static void CheckRadioInterrupts(void)
             uint16_t __raw;
         } interrupts;
 
-        interrupts.__raw = BK4819_ReadRegister(BK4819_REG_02);
+        // read once before clearing to catch momentary FSK events (sync/finished),
+        // then clear+read again in the original write-then-read order that the
+        // stock squelch (sqlLost/sqlFound) handling relied on
+        const uint16_t preClearBits = BK4819_ReadRegister(BK4819_REG_02);
+        BK4819_WriteRegister(BK4819_REG_02, 0);
+        interrupts.__raw = BK4819_ReadRegister(BK4819_REG_02) | preClearBits;
 
         // 0 = no phase shift
         // 1 = 120deg phase shift
@@ -830,7 +835,17 @@ static void CheckRadioInterrupts(void)
             BEAM_StorePacket();
         }
 #endif
+
+#ifdef ENABLE_MESSENGER
+        if (interrupts.fskRxSync || interrupts.fskFifoAlmostFull || interrupts.fskRxFinied) {
+            MSG_StorePacket(interrupts.__raw);
+        }
+#endif
     }
+
+#ifdef ENABLE_MESSENGER
+    MSG_CheckRxTimeout();
+#endif
 }
 
 void APP_EndTransmission(void)
