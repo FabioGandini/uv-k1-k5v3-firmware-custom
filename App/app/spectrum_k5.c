@@ -1106,16 +1106,15 @@ static void DrawF(uint32_t f) {
     memset(gFrameBuffer[0] + x0 - 2, 0, w + 4);
     UI_PrintStringSmallBold(channelName, 0, 127, 0);
 
-    // same big-digits font as the K5 spectrum / main VFO display
+    // medium two-row font (gFontBig, 8 px per char), the same size the
+    // K5 spectrum uses - the 13 px VFO digits were too big here
     sprintf(String, "%u.%05u", f / 100000, f % 100000);
     len = strlen(String);
-    w = (len - 1) * 13 + 3; // big digits: 13 px each, the dot 3 px
+    w = len * 8;
     x0 = (128 - w + 1) / 2;
-    if (x0 < 2)
-      x0 = 2;
     memset(gFrameBuffer[1] + x0 - 2, 0, w + 4);
     memset(gFrameBuffer[2] + x0 - 2, 0, w + 4);
-    UI_DisplayFrequency(String, x0, 1, false);
+    UI_PrintString(String, 0, 127, 1, 8);
   } else {
     sprintf(String, "%u.%05u", f / 100000, f % 100000);
     UI_PrintStringSmallNormal(String, 8, 127, 0);
