@@ -19,8 +19,11 @@
 
 // Port of the kamilsss655 (fagci-derived) spectrum analyzer to the
 // armel UV-K1 firmware. Differences from the K5 original:
-// - channel scan mode dropped (the K5 keeps a 200-channel RAM cache,
-//   the K1 has 1024 flash channels and no RAM to spare)
+// - channel scan mode reads each channel frequency from flash on the
+//   fly (the K5 keeps a 200-channel RAM cache, the K1 has 1024 flash
+//   channels and no RAM to spare); the scan list is capped at
+//   MAX_SCAN_CHANNELS valid channels, and the scan-list filter toggles
+//   between ALL and the radio's current scan list setting
 // - every symbol is static: the F4HWN bandscope (app/spectrum.c) is
 //   compiled in the same image and shares most fagci symbol names
 // - K5-only helpers (RX_OFFSET, RX_AGC, SETTINGS_SetVfoFrequency,
@@ -68,6 +71,7 @@ typedef enum State {
 
 typedef enum Mode {
   FREQUENCY_MODE,
+  CHANNEL_MODE,
   SCAN_RANGE_MODE,
 } Mode;
 
@@ -182,6 +186,9 @@ static const uint16_t scanStepBWRegValues[] = {
 #define SQUELCH_OFF_DELAY 10
 // 30 MHz, in 10Hz units
 #define HF_FREQUENCY 3000000
+// same cap as the K5 RAM cache; rssiHistory compresses >128 anyway
+#define MAX_SCAN_CHANNELS 200
+#define UHF_NOISE_FLOOR 40
 
 static const uint16_t RSSI_MAX_VALUE = 65535;
 
@@ -194,6 +201,18 @@ static bool isNormalizationApplied;
 static bool isAttenuationApplied;
 static uint8_t gainOffset[129];
 static uint8_t attenuationOffset[129];
+
+// channel scan mode
+static uint16_t scanChannel[MAX_SCAN_CHANNELS];
+static uint8_t scanChannelsCount;
+static bool scanListAll = true;
+static uint32_t lastPeakFrequency;
+static bool isKnownChannel = false;
+static int peakChannel = -1;
+static char channelName[12];
+static void LoadValidMemoryChannels(void);
+static void AutoAdjustResolution(void);
+static void LookupChannelInfo(void);
 
 static uint16_t R30, R37, R3D, R43, R47, R48, R7E, R02, R3F;
 static uint32_t initialFreq;
@@ -263,6 +282,8 @@ static uint16_t statuslineUpdateTimer = 0;
 static void RelaunchScan(void);
 static void ResetInterrupts(void);
 static void ToggleNormalizeRssi(bool on);
+static void ToggleScanList(void);
+static void ResetModifiers(void);
 
 // -------------------------------------------------- K5 helpers, inlined
 
@@ -495,6 +516,9 @@ static uint16_t GetScanStep(void) {
 }
 
 static uint16_t GetStepsCount(void) {
+  if (appMode == CHANNEL_MODE) {
+    return scanChannelsCount;
+  }
 #ifdef ENABLE_SCAN_RANGES
   if (appMode == SCAN_RANGE_MODE) {
     return (gScanRangeStop - gScanRangeStart) / GetScanStep();
@@ -520,13 +544,23 @@ static void TuneToPeak(void) {
 static void ExitAndCopyToVfo(void) {
   RestoreRegisters();
 
-  gTxVfo->STEP_SETTING = GetStepIdxFromStepFrequency(GetScanStep());
-  gTxVfo->Modulation = settings.modulationType;
-  gTxVfo->CHANNEL_BANDWIDTH = settings.listenBw;
+  if (appMode == CHANNEL_MODE && peak.i >= 1 &&
+      peak.i <= scanChannelsCount) {
+    // jump to the memory channel of the current peak
+    gEeprom.MrChannel[gEeprom.TX_VFO] = scanChannel[peak.i - 1];
+    gEeprom.ScreenChannel[gEeprom.TX_VFO] = scanChannel[peak.i - 1];
 
-  SetVfoFrequency(peak.f);
+    gRequestSaveVFO = true;
+    gVfoConfigureMode = VFO_CONFIGURE_RELOAD;
+  } else {
+    gTxVfo->STEP_SETTING = GetStepIdxFromStepFrequency(GetScanStep());
+    gTxVfo->Modulation = settings.modulationType;
+    gTxVfo->CHANNEL_BANDWIDTH = settings.listenBw;
 
-  gRequestSaveChannel = 1;
+    SetVfoFrequency(peak.f);
+
+    gRequestSaveChannel = 1;
+  }
 
   // Additional delay to debounce keys
   SYSTEM_DelayMs(200);
@@ -552,6 +586,11 @@ static uint16_t GetRssi(void) {
     SYSTICK_DelayUs(100);
   }
   rssi = BK4819_GetRSSI();
+
+  if (appMode == CHANNEL_MODE && FREQUENCY_GetBand(fMeasure) > BAND4_174MHz) {
+    // Increase perceived RSSI for UHF bands to imitate radio squelch
+    rssi += UHF_NOISE_FLOOR;
+  }
 
   rssi += gainOffset[CurrentScanIndex()];
   rssi -= attenuationOffset[CurrentScanIndex()];
@@ -591,7 +630,8 @@ static void ToggleRX(bool on) {
     // turn on CSS tail found interrupt
     BK4819_WriteRegister(BK4819_REG_3F, BK4819_REG_02_MASK_CxCSS_TAIL);
   } else {
-    BK4819_WriteRegister(BK4819_REG_43, GetBWRegValueForScan());
+    if (appMode != CHANNEL_MODE)
+      BK4819_WriteRegister(BK4819_REG_43, GetBWRegValueForScan());
   }
 }
 
@@ -611,6 +651,9 @@ static void InitScan(void) {
 
   scanInfo.scanStep = GetScanStep();
   scanInfo.measurementsCount = GetStepsCount();
+  // prevents phantom channel bar
+  if (appMode == CHANNEL_MODE)
+    scanInfo.measurementsCount++;
 }
 
 // resets modifiers like blacklist, attenuation, normalization
@@ -623,6 +666,10 @@ static void ResetModifiers(void) {
   memset(blacklistFreqs, 0, sizeof(blacklistFreqs));
   blacklistFreqsIdx = 0;
 #endif
+  if (appMode == CHANNEL_MODE) {
+    LoadValidMemoryChannels();
+    AutoAdjustResolution();
+  }
   ToggleNormalizeRssi(false);
   memset(attenuationOffset, 0, sizeof(attenuationOffset));
   isAttenuationApplied = false;
@@ -666,6 +713,7 @@ static void UpdatePeakInfoForce(void) {
   peak.rssi = scanInfo.rssiMax;
   peak.f = scanInfo.fPeak;
   peak.i = scanInfo.iPeak;
+  LookupChannelInfo();
   AutoTriggerLevel();
 }
 
@@ -920,6 +968,60 @@ static void ToggleNormalizeRssi(bool on) {
   RelaunchScan();
 }
 
+// channel scan support: the valid-channel list holds channel indexes
+// only; frequencies are fetched from flash while scanning
+static void LoadValidMemoryChannels(void) {
+  memset(scanChannel, 0, sizeof(scanChannel));
+  scanChannelsCount = 0;
+  for (uint16_t ch = MR_CHANNEL_FIRST;
+       ch <= MR_CHANNEL_LAST && scanChannelsCount < MAX_SCAN_CHANNELS; ch++) {
+    // ALL: any valid channel; SL: only the radio's current scan list
+    if (RADIO_CheckValidChannel(ch, !scanListAll,
+                                scanListAll ? 0 : gEeprom.SCAN_LIST_DEFAULT)) {
+      scanChannel[scanChannelsCount++] = ch;
+    }
+  }
+}
+
+static void AutoAdjustResolution(void) {
+  if (GetStepsCount() <= 64) {
+    settings.stepsCount = STEPS_64;
+  } else {
+    settings.stepsCount = STEPS_128;
+  }
+}
+
+static void ToggleScanList(void) {
+  scanListAll = !scanListAll;
+  LoadValidMemoryChannels();
+  ResetModifiers();
+  AutoAdjustResolution();
+}
+
+static void LookupChannelInfo(void) {
+  if (appMode != CHANNEL_MODE) {
+    isKnownChannel = false;
+    return;
+  }
+
+  if (lastPeakFrequency == peak.f)
+    return;
+
+  lastPeakFrequency = peak.f;
+
+  if (peak.i >= 1 && peak.i <= scanChannelsCount) {
+    peakChannel = scanChannel[peak.i - 1];
+    isKnownChannel = true;
+    memset(channelName, 0, sizeof(channelName));
+    SETTINGS_FetchChannelName(channelName, peakChannel);
+  } else {
+    peakChannel = -1;
+    isKnownChannel = false;
+  }
+
+  redrawStatus = true;
+}
+
 static void Attenuate(uint8_t amount) {
   // attenuate doesn't work with more than 128 samples,
   // since we select max rssi in such mode ignoring attenuation
@@ -964,7 +1066,12 @@ static void DrawSpectrum(void) {
 }
 
 static void DrawStatus(void) {
-  sprintf(String, "%d/%d", settings.dbMin, settings.dbMax);
+  if (isKnownChannel) {
+    sprintf(String, "%d/%d M%i:%s", settings.dbMin, settings.dbMax,
+            peakChannel + 1, channelName);
+  } else {
+    sprintf(String, "%d/%d", settings.dbMin, settings.dbMax);
+  }
   GUI_DisplaySmallest(String, 0, 1, true, true);
 
   BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[gBatteryCheckCounter++ % 4],
@@ -1009,15 +1116,28 @@ static void DrawNums(void) {
     }
     GUI_DisplaySmallest(String, 0, 1, false, true);
 
-    sprintf(String, "%u.%02uk", GetScanStep() / 100, GetScanStep() % 100);
-    GUI_DisplaySmallest(String, 0, 7, false, true);
+    if (appMode == CHANNEL_MODE) {
+      sprintf(String, "%s", scanListAll ? "ALL" : "SL");
+      GUI_DisplaySmallest(String, 0, 7, false, true);
+    } else {
+      sprintf(String, "%u.%02uk", GetScanStep() / 100, GetScanStep() % 100);
+      GUI_DisplaySmallest(String, 0, 7, false, true);
+    }
   }
 
-  sprintf(String, "%u.%05u", GetFStart() / 100000, GetFStart() % 100000);
-  GUI_DisplaySmallest(String, 0, 49, false, true);
+  if (appMode == CHANNEL_MODE) {
+    sprintf(String, "M:%d", scanChannel[0] + 1);
+    GUI_DisplaySmallest(String, 0, 49, false, true);
 
-  sprintf(String, "%u.%05u", GetFEnd() / 100000, GetFEnd() % 100000);
-  GUI_DisplaySmallest(String, 93, 49, false, true);
+    sprintf(String, "M:%d", scanChannel[GetStepsCount() - 1] + 1);
+    GUI_DisplaySmallest(String, 108, 49, false, true);
+  } else {
+    sprintf(String, "%u.%05u", GetFStart() / 100000, GetFStart() % 100000);
+    GUI_DisplaySmallest(String, 0, 49, false, true);
+
+    sprintf(String, "%u.%05u", GetFEnd() / 100000, GetFEnd() % 100000);
+    GUI_DisplaySmallest(String, 93, 49, false, true);
+  }
 
   if (isAttenuationApplied) {
     sprintf(String, "ATT");
@@ -1077,10 +1197,14 @@ static void OnKeyDown(uint8_t key) {
     UpdateDBMax(false);
     break;
   case KEY_1:
-    UpdateScanStep(true);
+    if (appMode != CHANNEL_MODE) {
+      UpdateScanStep(true);
+    }
     break;
   case KEY_7:
-    UpdateScanStep(false);
+    if (appMode != CHANNEL_MODE) {
+      UpdateScanStep(false);
+    }
     break;
   case KEY_2:
     ToggleNormalizeRssi(!isNormalizationApplied);
@@ -1089,26 +1213,18 @@ static void OnKeyDown(uint8_t key) {
     ToggleBacklight();
     break;
   case KEY_UP:
-#ifdef ENABLE_SCAN_RANGES
     if (appMode == FREQUENCY_MODE) {
       UpdateCurrentFreq(true);
     } else {
       ResetModifiers();
     }
-#else
-    UpdateCurrentFreq(true);
-#endif
     break;
   case KEY_DOWN:
-#ifdef ENABLE_SCAN_RANGES
     if (appMode == FREQUENCY_MODE) {
       UpdateCurrentFreq(false);
     } else {
       ResetModifiers();
     }
-#else
-    UpdateCurrentFreq(false);
-#endif
     break;
   case KEY_SIDE1:
     Blacklist();
@@ -1120,9 +1236,7 @@ static void OnKeyDown(uint8_t key) {
     UpdateRssiTriggerLevel(false);
     break;
   case KEY_5:
-#ifdef ENABLE_SCAN_RANGES
     if (appMode == FREQUENCY_MODE)
-#endif
       FreqInput();
     break;
   case KEY_0:
@@ -1132,7 +1246,9 @@ static void OnKeyDown(uint8_t key) {
     ToggleListeningBW();
     break;
   case KEY_4:
-    if (appMode != SCAN_RANGE_MODE) {
+    if (appMode == CHANNEL_MODE) {
+      ToggleScanList();
+    } else if (appMode != SCAN_RANGE_MODE) {
       ToggleStepsCount();
     }
     break;
@@ -1277,7 +1393,11 @@ static void RenderStatus(void) {
 
 static void RenderSpectrum(void) {
   DrawTicks();
-  DrawArrow(128u * peak.i / GetStepsCount());
+  if ((appMode == CHANNEL_MODE) && (GetStepsCount() < 128u)) {
+    DrawArrow(peak.i * (settings.stepsCount + 1));
+  } else {
+    DrawArrow(128u * peak.i / GetStepsCount());
+  }
   DrawSpectrum();
   DrawRssiTriggerLevel();
   DrawF(peak.f);
@@ -1411,8 +1531,14 @@ static void Scan(void) {
 
 static void NextScanStep(void) {
   ++peak.t;
-  ++scanInfo.i;
-  scanInfo.f += scanInfo.scanStep;
+  if (appMode == CHANNEL_MODE) {
+    // channel frequency is read from flash on the fly (no RAM cache)
+    scanInfo.f = SETTINGS_FetchChannelFrequency(scanChannel[scanInfo.i]);
+    ++scanInfo.i;
+  } else {
+    ++scanInfo.i;
+    scanInfo.f += scanInfo.scanStep;
+  }
 }
 
 static void UpdateScan(void) {
@@ -1464,7 +1590,8 @@ static void UpdateListening(void) {
   }
 
   if (currentState == SPECTRUM) {
-    BK4819_WriteRegister(BK4819_REG_43, GetBWRegValueForScan());
+    if (appMode != CHANNEL_MODE)
+      BK4819_WriteRegister(BK4819_REG_43, GetBWRegValueForScan());
     Measure();
     BK4819_SetFilterBandwidth(settings.listenBw, false);
   } else {
@@ -1537,6 +1664,11 @@ static void Tick(void) {
 void APP_RunSpectrumK5(void) {
   Mode mode = FREQUENCY_MODE;
 
+  // memory channel on the active VFO -> scan the saved channels,
+  // like the kamilsss655 K5 firmware does
+  if (IS_MR_CHANNEL(gEeprom.ScreenChannel[gEeprom.TX_VFO])) {
+    mode = CHANNEL_MODE;
+  }
 #ifdef ENABLE_SCAN_RANGES
   if (gScanRangeStart) {
     mode = SCAN_RANGE_MODE;
@@ -1545,9 +1677,18 @@ void APP_RunSpectrumK5(void) {
 
   // reset modifiers if launched in a different mode than the previous run
   if (appMode != mode) {
+    appMode = mode;
     ResetModifiers();
   }
-  appMode = mode;
+
+  if (mode == CHANNEL_MODE) {
+    LoadValidMemoryChannels();
+    AutoAdjustResolution();
+    if (scanChannelsCount == 0) {
+      // no valid channels: fall back to frequency mode
+      appMode = mode = FREQUENCY_MODE;
+    }
+  }
 
 #ifdef ENABLE_SCAN_RANGES
   if (mode == SCAN_RANGE_MODE) {
