@@ -89,6 +89,7 @@
             "inherits": "default",
             "cacheVariables": {
                 "ENABLE_SPECTRUM": true,
+                "ENABLE_SPECTRUM_K5": true,
                 "EDITION_STRING": "Custom",
                 "TARGET": "f4hwn.custom"
             }

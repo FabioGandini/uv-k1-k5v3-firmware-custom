@@ -35,6 +35,10 @@
 #include "app/breakout.h"
 #endif
 
+#ifdef ENABLE_SPECTRUM_K5
+#include "app/spectrum_k5.h"
+#endif
+
 #include "audio.h"
 #include "board.h"
 #include "driver/bk4819.h"
@@ -262,7 +266,14 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
             break;
 
         case KEY_7:
-#ifdef ENABLE_FEAT_F4HWN_GAME
+#if defined(ENABLE_SPECTRUM_K5)
+            // F+7: kamilsss655 spectrum analyzer (takes the slot of the
+            // breakout game); the F4HWN bandscope stays on F+5
+            if (!beep) {
+                APP_RunSpectrumK5();
+                gRequestDisplayScreen = DISPLAY_MAIN;
+            } else {
+#elif defined(ENABLE_FEAT_F4HWN_GAME)
             if (!beep) {
                 APP_RunBreakout();
             } else {
@@ -272,7 +283,7 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
 //#else
 //              toggle_chan_scanlist();
 #endif
-#ifdef ENABLE_FEAT_F4HWN_GAME
+#if defined(ENABLE_SPECTRUM_K5) || defined(ENABLE_FEAT_F4HWN_GAME)
             }
 #endif
 
