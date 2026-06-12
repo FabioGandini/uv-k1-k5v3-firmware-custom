@@ -1066,13 +1066,7 @@ static void DrawSpectrum(void) {
 }
 
 static void DrawStatus(void) {
-  if (isKnownChannel) {
-    // channel name only: with the M-number prefix and the dB range the
-    // name was unreadable on this small screen
-    sprintf(String, "%s", channelName);
-  } else {
-    sprintf(String, "%d/%d", settings.dbMin, settings.dbMax);
-  }
+  sprintf(String, "%d/%d", settings.dbMin, settings.dbMax);
   GUI_DisplaySmallest(String, 0, 1, true, true);
 
   BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[gBatteryCheckCounter++ % 4],
@@ -1098,8 +1092,18 @@ static void DrawStatus(void) {
 }
 
 static void DrawF(uint32_t f) {
-  sprintf(String, "%u.%05u", f / 100000, f % 100000);
-  UI_PrintStringSmallNormal(String, 8, 127, 0);
+  // channel mode: bold channel name above a big frequency, like the
+  // kamilsss655 K5 UI; only in the SPECTRUM view (in STILL the big
+  // font would overlap the S-meter row)
+  if (currentState == SPECTRUM && appMode == CHANNEL_MODE && isKnownChannel &&
+      channelName[0] != 0 && f == lastPeakFrequency) {
+    UI_PrintStringSmallBold(channelName, 0, 127, 0);
+    sprintf(String, "%u.%05u", f / 100000, f % 100000);
+    UI_PrintString(String, 2, 127, 1, 8);
+  } else {
+    sprintf(String, "%u.%05u", f / 100000, f % 100000);
+    UI_PrintStringSmallNormal(String, 8, 127, 0);
+  }
 
   sprintf(String, "%3s", gModulationStr[settings.modulationType]);
   GUI_DisplaySmallest(String, 116, 1, false, true);
@@ -1120,6 +1124,11 @@ static void DrawNums(void) {
     if (appMode == CHANNEL_MODE) {
       sprintf(String, "%s", scanListAll ? "ALL" : "SL");
       GUI_DisplaySmallest(String, 0, 7, false, true);
+      if (isKnownChannel) {
+        // peak channel number, small on the left like the K5 UI
+        sprintf(String, "M%i", peakChannel + 1);
+        GUI_DisplaySmallest(String, 0, 13, false, true);
+      }
     } else {
       sprintf(String, "%u.%02uk", GetScanStep() / 100, GetScanStep() % 100);
       GUI_DisplaySmallest(String, 0, 7, false, true);
