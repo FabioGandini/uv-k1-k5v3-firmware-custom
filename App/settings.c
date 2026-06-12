@@ -455,7 +455,9 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
         // TODO: address TBD
         PY25Q16_ReadBuffer(0x00A158, Data, 8);
 #ifdef ENABLE_MESSENGER
-        gEeprom.MESSENGER_CONFIG.__val = (Data[0] == 0xFF) ? 0x01 : Data[0];
+        // byte 2: bytes 0-1 hold the build options bitmap, rewritten on
+        // every boot by SETTINGS_WriteBuildOptions()
+        gEeprom.MESSENGER_CONFIG.__val = (Data[2] == 0xFF) ? 0x01 : Data[2];
 #endif
         const uint8_t set_ptt_scn = Data[7] & 0x0F;
         gSetting_set_pwr = (((Data[7] & 0xF0) >> 4) < 7) ? ((Data[7] & 0xF0) >> 4) : 0;
@@ -1102,7 +1104,8 @@ void SETTINGS_SaveSettings(void)
     //memset(State, 0xFF, sizeof(State));
 
 #ifdef ENABLE_MESSENGER
-    State[0] = gEeprom.MESSENGER_CONFIG.__val;
+    // byte 2: bytes 0-1 belong to the build options bitmap
+    State[2] = gEeprom.MESSENGER_CONFIG.__val;
 #endif
 
     /*
