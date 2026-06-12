@@ -1362,6 +1362,9 @@ State[1] = 0
 #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     | (1 << 6)
 #endif
+#ifdef ENABLE_MESSENGER
+    | (1 << 7)
+#endif
 ;
     PY25Q16_WriteBuffer(0x00A158, State, sizeof(State), false);
 }
