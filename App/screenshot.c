@@ -24,27 +24,28 @@
 // SRAM optimization: minimize static allocations
 // - previousHash: one fingerprint per 8-byte chunk instead of a full
 //   1024-byte copy of the previous frame (chunks are only compared,
-//   never retransmitted from history). A hash collision would skip one
-//   stale chunk, which the forcedBlock rotation repairs within at most
-//   128 frames anyway.
+//   never retransmitted from history). A 16-bit fingerprint keeps the
+//   collision odds at ~1/65536 per chunk, so a stale chunk slipping
+//   through is rare; the forcedBlock rotation repairs that residual
+//   within at most 128 frames.
 // Stack optimization: chunks are computed on demand straight from
 // gStatusLine/gFrameBuffer instead of building the whole 1024-byte
 // frame on the stack. Changed chunks are tracked in a 16-byte bitmap.
 // Peak stack drops from ~1.3 KB to ~40 bytes, at the cost of
 // transforming each transmitted chunk twice (negligible next to the
 // blocking UART transfer).
-static uint8_t previousHash[128];
+static uint16_t previousHash[128];
 static uint8_t forcedBlock = 0;
 static uint8_t keepAlive = 3;
 
-// FNV-1a over one 8-byte chunk, folded to 8 bits
-static uint8_t SCREENSHOT_Hash(const uint8_t *data)
+// FNV-1a over one 8-byte chunk, folded to 16 bits
+static uint16_t SCREENSHOT_Hash(const uint8_t *data)
 {
     uint32_t h = 2166136261u;
     for (uint8_t i = 0; i < 8; i++) {
         h = (h ^ data[i]) * 16777619u;
     }
-    return (uint8_t)(h ^ (h >> 8) ^ (h >> 16) ^ (h >> 24));
+    return (uint16_t)(h ^ (h >> 16));
 }
 
 void SCREENSHOT_ParseInput(void)
