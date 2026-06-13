@@ -720,6 +720,11 @@ DTMF_CODE_CHARS = "ABCD*# "
 DTMF_DECODE_RESPONSE_LIST = ["DO NOTHING", "Local ringing (RING)", "Replay response (REPLY)",
                              "Local ringing + reply response (BOTH)"]
 
+# Base list, positionally matching the first entries of the firmware's
+# ACTION_OPT_t enum. Entries that only exist in some builds (POWER HIGH /
+# REMOVE OFFSET / MESSENGER) are appended dynamically in the correct enum
+# order by _get_keyactions_list(), based on the BUILD_OPTIONS read back
+# from the radio's EEPROM.
 KEYACTIONS_LIST = ["NONE",
                    "FLASHLIGHT",
                    "POWER",
@@ -735,15 +740,12 @@ KEYACTIONS_LIST = ["NONE",
                    "MODE",
                    "BL_MIN_TMP_OFF",
                    "RX MODE",
-                   "MAIN ONLY", 
-                   "PTT",                  
+                   "MAIN ONLY",
+                   "PTT",
                    "WIDE / NARROW",
                    "BACKLIGHT",
                    "MUTE",
-                   "RxA",
-                   "POWER HIGH",
-                   "REMOVE OFFSET",
-                   "BEAM"
+                   "RxA"
                   ]
 
 MIC_GAIN_LIST = ["+1.5dB", "+4.0dB", "+8.0dB", "+12.0dB", "+16.0dB", "+20.0dB", "+24.0dB", "+28.0dB", "+31.5dB"]
@@ -1517,6 +1519,17 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
 
         return mem
 
+    def _get_keyactions_list(self):
+        """Build the key action list positionally matching this
+        firmware's ACTION_OPT_t enum, appending the build-dependent
+        entries in the same order as the C enum."""
+        lst = list(KEYACTIONS_LIST)
+        if self._memobj.BUILD_OPTIONS.ENABLE_FEAT_F4HWN_RESCUE_OPS:
+            lst += ["POWER HIGH", "REMOVE OFFSET"]
+        if self._memobj.BUILD_OPTIONS.ENABLE_MESSENGER:
+            lst += ["MESSENGER"]
+        return lst
+
     def set_settings(self, settings):
         _mem = self._memobj
         for element in settings:
@@ -1928,19 +1941,19 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             # Shortcuts
 
             if elname == "key1_shortpress_action":
-                _mem.key1_shortpress_action = KEYACTIONS_LIST.index(element.value)
+                _mem.key1_shortpress_action = self._get_keyactions_list().index(element.value)
 
             elif elname == "key1_longpress_action":
-                _mem.key1_longpress_action = KEYACTIONS_LIST.index(element.value)
+                _mem.key1_longpress_action = self._get_keyactions_list().index(element.value)
 
             elif elname == "key2_shortpress_action":
-                _mem.key2_shortpress_action = KEYACTIONS_LIST.index(element.value)
+                _mem.key2_shortpress_action = self._get_keyactions_list().index(element.value)
 
             elif elname == "key2_longpress_action":
-                _mem.key2_longpress_action = KEYACTIONS_LIST.index(element.value)
+                _mem.key2_longpress_action = self._get_keyactions_list().index(element.value)
 
             elif elname == "keyM_longpress_action":
-                _mem.keyM_longpress_action = KEYACTIONS_LIST.index(element.value)
+                _mem.keyM_longpress_action = self._get_keyactions_list().index(element.value)
 
 # this change to send power level chan in the calibration but under macos it give error
 # bugfix calibration : remove the comment on next 2 line:
@@ -2034,11 +2047,11 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             has_1750 = self._memobj.BUILD_OPTIONS.ENABLE_TX1750
             has_flashlight = self._memobj.BUILD_OPTIONS.ENABLE_FLASHLIGHT
             has_fm_radio = self._memobj.BUILD_OPTIONS.ENABLE_FMRADIO
-            has_rescue_ops = self._memobj.BUILD_OPTIONS.ENABLE_FEAT_F4HWN_RESCUE_OPS
             has_game = self._memobj.BUILD_OPTIONS.ENABLE_FEAT_F4HWN_GAME
             has_vox = self._memobj.BUILD_OPTIONS.ENABLE_VOX
-            
-            lst = KEYACTIONS_LIST.copy()
+
+            full_list = self._get_keyactions_list()
+            lst = full_list.copy()
             lst.remove("BACKLIGHT") # Only for key press on TX
             lst.remove("BL_MIN_TMP_OFF")
 
@@ -2050,17 +2063,14 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
                 lst.remove("FLASHLIGHT")
             if not has_fm_radio:
                 lst.remove("FM RADIO")
-            if not has_rescue_ops:
-                lst.remove("POWER HIGH")
-                lst.remove("REMOVE OFFSET")
             if not has_vox:
                 lst.remove("MUTE")
 
             action_num = int(action_num)
-            if action_num >= len(KEYACTIONS_LIST) or \
-               KEYACTIONS_LIST[action_num] not in lst:
+            if action_num >= len(full_list) or \
+               full_list[action_num] not in lst:
                 action_num = 0
-            return lst, KEYACTIONS_LIST[action_num]
+            return lst, full_list[action_num]
 
         val1s = RadioSettingValueList(*get_action(_mem.key1_shortpress_action))
         rs = RadioSetting("key1_shortpress_action",
