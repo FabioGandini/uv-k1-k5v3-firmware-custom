@@ -1983,7 +1983,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         val = RadioSettingValueBoolean(False)
         def validate_Go_Web_Firmware(value):
             if value :
-                msg = "To see information for the update of the Firmware F4HWN \n"
+                msg = "To see information for the update of the Firmware \n"
                 ret = wx.MessageBox(msg, "Warning", wx.OK | wx.CANCEL |
                                     wx.CANCEL_DEFAULT | wx.ICON_WARNING)
                 if ret == wx.OK :
@@ -1993,8 +1993,8 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             return value
 
         val.set_validate_callback(validate_Go_Web_Firmware)
-        rs = RadioSetting("Update_Firmware_mise_a_jour","To see information for the update of the Firmware F4HWN , select this box ->", val)
-        rs.set_doc('To see information for the update of the Firmware F4HWN !')
+        rs = RadioSetting("Update_Firmware_mise_a_jour","To see information for the update of the Firmware, select this box ->", val)
+        rs.set_doc('To see information for the update of the Firmware!')
         radio_firmware.append(rs)
 
 # end add link for mise a jour information
@@ -2575,7 +2575,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         val = RadioSettingValueList(TALK_TIME_LIST, None, tmptot)
         tx_t_out_setting = RadioSetting("tot", "Max TX Timeout (TxTOut)", val)
         tx_t_out_setting.set_doc('TxTOut: Select the TX time limit\n' + \
-                                 'See option (SetTot) of F4HWN')
+                                 'See option (SetTot)')
 
         tmpbatsave = list_def(_mem.battery_save, BATSAVE_LIST, 5)
         val = RadioSettingValueList(BATSAVE_LIST, None, tmpbatsave)
@@ -2845,7 +2845,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             firmware = self.FIRMWARE_VERSION
 
         append_label(roinfo,
-                     "=" * 6 + " Firmware F4HWN " + "=" * 300, "=" * 300)
+                     "=" * 6 + " Firmware " + "=" * 300, "=" * 300)
 
         append_label(roinfo, "Firmware Version", firmware)
 
@@ -2854,7 +2854,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         val = RadioSettingValueBoolean(False)
         def validate_Go_Web_Page0(value):
             if value :
-                msg = "Go to the web Page of the Firmware F4HWN \n" \
+                msg = "Go to the web Page of the Firmware \n" \
                       + FIRMWARE_VERSION_UPDATE
                 ret = wx.MessageBox(msg, "Warning", wx.OK | wx.CANCEL |
                                     wx.CANCEL_DEFAULT | wx.ICON_WARNING)
@@ -2865,7 +2865,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             return value
 
         val.set_validate_callback(validate_Go_Web_Page0)
-        rs = RadioSetting("Update_Firmware_0","Go to the web page of Latest Firmware F4HWN select this Box ->", val)
+        rs = RadioSetting("Update_Firmware_0","Go to the web page of Latest Firmware select this Box ->", val)
         rs.set_doc('Be sure you have the latest firmware available!')
         roinfo.append(rs)
         
@@ -2877,7 +2877,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         append_label(roinfo,"","")
                 
         append_label(roinfo,
-                     "=" * 6 + " Chirp Driver F4HWN " + "=" * 300, "=" * 300)
+                     "=" * 6 + " Chirp Driver " + "=" * 300, "=" * 300)
                      
         append_label(roinfo, "Driver Chirp Version         ", DRIVER_VERSION)
         
@@ -2886,7 +2886,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         val = RadioSettingValueBoolean(False)
         def validate_Go_Web_Page(value):
             if value :
-                msg = "Go to the web Page of the Chirp Driver F4HWN \n" \
+                msg = "Go to the web Page of the Chirp Driver \n" \
                       + CHIRP_DRIVER_VERSION_UPDATE
                 ret = wx.MessageBox(msg, "Warning", wx.OK | wx.CANCEL |
                                     wx.CANCEL_DEFAULT | wx.ICON_WARNING)
@@ -2897,7 +2897,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             return value
 
         val.set_validate_callback(validate_Go_Web_Page)
-        rs = RadioSetting("Update_Driver_Chirp_0","Go to the web page of Latest chirp Driver F4HWN select this Box ->", val)
+        rs = RadioSetting("Update_Driver_Chirp_0","Go to the web page of Latest chirp Driver select this Box ->", val)
         rs.set_doc('Be sure you have the latest CHIRP driver available!')
         roinfo.append(rs)
 
@@ -3272,7 +3272,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
 
         # -------- LAYOUT
         append_label(basic,
-                     "=" * 6 + " Start of F4HWN Settings." + "=" * 300, "=" * 300)
+                     "=" * 6 + " Start of Settings." + "=" * 300, "=" * 300)
         basic.append(SetPwrSetting)
         basic.append(SetPttSetting)
         basic.append(SetTotSetting)
@@ -3300,7 +3300,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             basic.append(MsgKeySetting)
 
         append_label(basic,
-                     "=" * 6 + " End of F4HWN settings " + "=" * 300, "=" * 300)
+                     "=" * 6 + " End of settings " + "=" * 300, "=" * 300)
 
         append_label(basic,
                      "=" * 6 + " General settings " + "=" * 300, "=" * 300)
