@@ -712,7 +712,19 @@ static void CheckRadioInterrupts(void)
 //      if (ctcss_shift > 0)
 //          g_CTCSS_Lost = true;
 
-        if (interrupts.dtmf5ToneFound) {    
+#ifdef ENABLE_MESSENGER
+        // While messenger RX is enabled, AF=FM is forced even with the
+        // squelch closed so the FSK slicer keeps working - this also keeps
+        // the BK4829's 5-tone/DTMF decoder running on raw RF noise, which it
+        // happily matches into spurious digits ("4444444444", "*********",
+        // ...). Only trust 5-tone detections while the squelch is genuinely
+        // open (a real carrier is present); a real DTMF code always rides
+        // on a carrier, so this doesn't affect legitimate decoding.
+        if (interrupts.dtmf5ToneFound && gEeprom.MESSENGER_CONFIG.data.receive && !g_SquelchLost)
+            interrupts.dtmf5ToneFound = 0;
+#endif
+
+        if (interrupts.dtmf5ToneFound) {
             const char c = DTMF_GetCharacter(BK4819_GetDTMF_5TONE_Code()); // save the RX'ed DTMF character
             if (c != 0xff) {
                 if (gCurrentFunction != FUNCTION_TRANSMIT) {
