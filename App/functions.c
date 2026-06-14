@@ -145,12 +145,16 @@ void FUNCTION_Transmit()
     BK4819_DisableDTMF();
 
 #ifdef ENABLE_MESSENGER
-    // While messenger RX is enabled, REG_70's Tone2 generator is left
-    // enabled (gain 96) as the FSK demodulator reference (see
-    // MSG_EnableRX/MSG_ConfigureFSK). Nothing else clears it before TX, so
-    // the Tone2 generator stays active and blocks the mic audio path -
-    // transmitting a silent carrier. Disable Tone1/Tone2 before TX; RX setup
-    // re-applies the FSK config afterwards.
+    // While messenger RX is enabled, MSG_ConfigureFSK/MSG_EnableRX leave the
+    // FSK modem engaged (REG_58 FSK-enable bit + REG_59 RX-enable bit, plus
+    // REG_70's Tone2 generator as the FSK demod reference). Nothing clears
+    // this before TX, so the chip stays latched onto the FSK path instead of
+    // normal FM modulation - the PA/carrier comes up but mic audio never
+    // reaches the modulator (silent carrier). Put the chip back into the
+    // same "messenger RX disabled" state (REG_58 = 0, REG_70 = 0) before TX;
+    // RADIO_SetupRegisters() re-applies the FSK config via MSG_EnableRX(true)
+    // once TX ends.
+    BK4819_WriteRegister(BK4819_REG_58, 0);
     BK4819_WriteRegister(BK4819_REG_70, 0);
 #endif
 
