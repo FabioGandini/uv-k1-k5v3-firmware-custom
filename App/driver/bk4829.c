@@ -428,7 +428,10 @@ int8_t BK4819_GetRxGain_dB(void)
 int16_t BK4819_GetRSSI_dBm(void)
 {
     uint16_t rssi = BK4819_GetRSSI();
-    return (rssi / 2) - 160;// - BK4819_GetRxGain_dB();
+    // empirical calibration: the BK4829 reads RSSI ~24dB hotter than the
+    // BK4819 for the same RF level (measured -83dBm on K1 vs -107dBm on K5
+    // for the same signal)
+    return (rssi / 2) - 160 - 24;// - BK4819_GetRxGain_dB();
 }
 
 void BK4819_ToggleGpioOut(BK4819_GPIO_PIN_t Pin, bool bSet)
