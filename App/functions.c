@@ -146,16 +146,20 @@ void FUNCTION_Transmit()
 
 #ifdef ENABLE_MESSENGER
     // While messenger RX is enabled, MSG_ConfigureFSK/MSG_EnableRX leave the
-    // FSK modem engaged (REG_58 FSK-enable bit + REG_59 RX-enable bit, plus
-    // REG_70's Tone2 generator as the FSK demod reference). Nothing clears
-    // this before TX, so the chip stays latched onto the FSK path instead of
-    // normal FM modulation - the PA/carrier comes up but mic audio never
-    // reaches the modulator (silent carrier). Put the chip back into the
-    // same "messenger RX disabled" state (REG_58 = 0, REG_70 = 0) before TX;
+    // whole FSK chain engaged and the chip stays latched on the FSK path
+    // instead of normal FM modulation: the carrier comes up but mic audio
+    // never reaches the modulator (silent carrier with MsgRX on; mic is fine
+    // with MsgRX off). Clearing only REG_58/REG_70 wasn't enough, so tear the
+    // full FSK chain down before TX: REG_59 (FSK control/RX-enable), REG_72
+    // (Tone2 generator that feeds the modulator) and REG_58/REG_70.
     // RADIO_SetupRegisters() re-applies the FSK config via MSG_EnableRX(true)
     // once TX ends.
-    BK4819_WriteRegister(BK4819_REG_58, 0);
-    BK4819_WriteRegister(BK4819_REG_70, 0);
+    if (gEeprom.MESSENGER_CONFIG.data.receive) {
+        BK4819_WriteRegister(BK4819_REG_59, 0);
+        BK4819_WriteRegister(BK4819_REG_58, 0);
+        BK4819_WriteRegister(BK4819_REG_72, 0);
+        BK4819_WriteRegister(BK4819_REG_70, 0);
+    }
 #endif
 
 #ifdef ENABLE_DTMF_CALLING
