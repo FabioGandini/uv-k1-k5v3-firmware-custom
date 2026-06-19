@@ -739,8 +739,10 @@ void MSG_ConfigureFSK(bool rx)
 									//   6 = ???
 									//   7 = FFSK 1200 / 1800 RX
 									//
-				(0u << 8) |			// 0 FSK RX gain
-									//   0 ~ 3
+				(3u << 8) |			// FSK RX gain (0~3): bumped to MAX. The
+									//   K1/BK4829 is less sensitive in RX than
+									//   the K5/BK4819 - with gain 0 it hears the
+									//   carrier but never locks the FSK sync.
 									//
 				(3u << 6) |			// 3 ??? .. aircopy (the only FSK RX
 									//   path verified working on the K1
@@ -779,20 +781,21 @@ void MSG_ConfigureFSK(bool rx)
 									//   6 = ???
 									//   7 = ???
 									//
-				(7u << 10) |		// 0 FSK RX mode selection
-									//   0 = FSK 1.2K, FSK 2.4K RX and NOAA SAME RX .. no tones, direct FM
-									//   1 = ???
-									//   2 = ???
-									//   3 = ???
+				(5u << 10) |		// FSK RX mode: 5 = the value the stock K1
+									//   aircopy uses (REG_58=0x37C3, RX mode 5).
+									//   Was 7 (FFSK 1200/1800 RX) = kamilsss655
+									//   K5/BK4819 tuning. On the K1/BK4829 the
+									//   factory-proven aircopy RX path uses 5.
+									//   0 = FSK 1.2K, FSK 2.4K RX and NOAA SAME RX
 									//   4 = FFSK 1200 / 2400 RX
-									//   5 = ???
-									//   6 = ???
 									//   7 = FFSK 1200 / 1800 RX
 									//
 				(3u << 8) |			// 0 FSK RX gain
 									//   0 ~ 3
 									//
-				(0u << 6) |			// 0 ???
+				(3u << 6) |			// 3 = aircopy field <7:6> (the only FSK RX
+									//   path verified working on the K1/BK4829
+									//   chip variant). Was 0 (K5 tuning).
 									//   0 ~ 3
 									//
 				(0u << 4) |			// 0 FSK preamble type selection
