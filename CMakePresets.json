@@ -95,7 +95,7 @@
                 "ENABLE_SPECTRUM_K5": true,
                 "ENABLE_AIRCOPY": true,
                 "AUTHOR_STRING_2": "IU2VTM",
-                "VERSION_STRING_2": "1.0",
+                "VERSION_STRING_2": "2.0",
                 "EDITION_STRING": "Kismet",
                 "TARGET": "iu2vtm"
             }
