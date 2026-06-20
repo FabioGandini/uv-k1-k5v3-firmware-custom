@@ -439,6 +439,15 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
     // 0F30..0F3F
     PY25Q16_ReadBuffer(0x00A138, gCustomAesKey, sizeof(gCustomAesKey));
     bHasCustomAesKey = false;
+#ifdef ENABLE_ENCRYPTION
+    // reuse the AES key slot (unused under ENABLE_FEAT_F4HWN: the UART
+    // challenge command is compiled out) for the messenger encryption key
+    PY25Q16_ReadBuffer(0x00A138, gEeprom.ENC_KEY, sizeof(gEeprom.ENC_KEY));
+#endif
+#ifdef ENABLE_MESSENGER
+    // station callsign auto-prepended to messages for ID (8 bytes at 0xA170)
+    PY25Q16_ReadBuffer(0x00A170, gEeprom.CALLSIGN, sizeof(gEeprom.CALLSIGN));
+#endif
     #ifndef ENABLE_FEAT_F4HWN
         for (unsigned int i = 0; i < ARRAY_SIZE(gCustomAesKey); i++)
         {
@@ -454,11 +463,24 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
         // 1FF0..0x1FF7
         // TODO: address TBD
         PY25Q16_ReadBuffer(0x00A158, Data, 8);
-        const uint8_t set_ptt_scn = Data[7] & 0x0F;
+#ifdef ENABLE_MESSENGER
+        // byte 2: bytes 0-1 hold the build options bitmap, rewritten on
+        // every boot by SETTINGS_WriteBuildOptions()
+        gEeprom.MESSENGER_CONFIG.__val = (Data[2] == 0xFF) ? 0x01 : Data[2];
+#endif
+        const uint8_t set_ptt_scn_sav = Data[7] & 0x0F;
+#ifdef ENABLE_FEAT_F4HWN_LOGO_SAV
+        const bool set_ptt_scn_sav_valid = set_ptt_scn_sav < (SET_SAV_LEN << 2);
+#else
+        const bool set_ptt_scn_sav_valid = set_ptt_scn_sav < 4;
+#endif
         gSetting_set_pwr = (((Data[7] & 0xF0) >> 4) < 7) ? ((Data[7] & 0xF0) >> 4) : 0;
-        gSetting_set_ptt = (set_ptt_scn < 4) ? (set_ptt_scn & 0x01) : 0;
+        gSetting_set_ptt = set_ptt_scn_sav_valid ? (set_ptt_scn_sav & 0x01) : 0;
 #ifdef ENABLE_FEAT_F4HWN_SCAN_FASTER
-        gSetting_set_scn = (set_ptt_scn < 4) ? ((set_ptt_scn & 0x02) == 0) : 1;
+        gSetting_set_scn = set_ptt_scn_sav_valid ? ((set_ptt_scn_sav & 0x02) == 0) : 1;
+#endif
+#ifdef ENABLE_FEAT_F4HWN_LOGO_SAV
+        gSetting_set_sav = set_ptt_scn_sav_valid ? ((set_ptt_scn_sav >> 2) & 0x03) : SET_SAV_OFF;
 #endif
 
         gSetting_set_tot = (((Data[6] & 0xF0) >> 4) < 4) ? ((Data[6] & 0xF0) >> 4) : 0;
@@ -799,6 +821,15 @@ void SETTINGS_FactoryReset(bool bIsAll)
     #endif
 }
 
+#ifdef ENABLE_MESSENGER
+void SETTINGS_SaveCallsign(void)
+{
+    // persist the 8-byte station callsign at EEPROM 0xA170 (sector
+    // read-modify-write keeps the surrounding settings intact)
+    PY25Q16_WriteBuffer(0x00A170, gEeprom.CALLSIGN, sizeof(gEeprom.CALLSIGN), false);
+}
+#endif
+
 #ifdef ENABLE_FMRADIO
 void SETTINGS_SaveFM(void)
     {
@@ -1098,6 +1129,11 @@ void SETTINGS_SaveSettings(void)
 
     //memset(State, 0xFF, sizeof(State));
 
+#ifdef ENABLE_MESSENGER
+    // byte 2: bytes 0-1 belong to the build options bitmap
+    State[2] = gEeprom.MESSENGER_CONFIG.__val;
+#endif
+
     /*
     tmp = 0;
 
@@ -1131,13 +1167,16 @@ void SETTINGS_SaveSettings(void)
 
     State[5] = ((tmp << 4) | (gSetting_set_ctr & 0x0F));
     State[6] = ((gSetting_set_tot << 4) | (gSetting_set_eot & 0x0F));
-    uint8_t set_ptt_scn = gSetting_set_ptt & 0x01;
+    uint8_t set_ptt_scn_sav = gSetting_set_ptt & 0x01;
 #ifdef ENABLE_FEAT_F4HWN_SCAN_FASTER
     if (!gSetting_set_scn)
-        set_ptt_scn |= 0x02;
+        set_ptt_scn_sav |= 0x02;
+#endif
+#ifdef ENABLE_FEAT_F4HWN_LOGO_SAV
+    set_ptt_scn_sav |= (gSetting_set_sav & 0x03) << 2;
 #endif
 
-    State[7] = ((gSetting_set_pwr << 4) | set_ptt_scn);
+    State[7] = ((gSetting_set_pwr << 4) | set_ptt_scn_sav);
 
     gEeprom.KEY_LOCK_PTT = gSetting_set_lck;
 
@@ -1346,6 +1385,9 @@ State[1] = 0
 #endif
 #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     | (1 << 6)
+#endif
+#ifdef ENABLE_MESSENGER
+    | (1 << 7)
 #endif
 ;
     PY25Q16_WriteBuffer(0x00A158, State, sizeof(State), false);

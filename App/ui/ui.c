@@ -39,6 +39,9 @@
 #include "ui/scanner.h"
 #include "ui/ui.h"
 #include "../misc.h"
+#ifdef ENABLE_MESSENGER
+    #include "ui/messenger.h"
+#endif
 
 GUI_DisplayType_t gScreenToDisplay;
 GUI_DisplayType_t gRequestDisplayScreen = DISPLAY_INVALID;
@@ -63,6 +66,9 @@ void (*UI_DisplayFunctions[])(void) = {
 
 #ifdef ENABLE_REGA
     [DISPLAY_REGA] = &UI_DisplayREGA,
+#endif
+#ifdef ENABLE_MESSENGER
+    [DISPLAY_MSG] = &UI_DisplayMSG,
 #endif
 };
 

@@ -52,6 +52,9 @@
 #ifdef ENABLE_UART
     #include "driver/uart.h"
 #endif
+#ifdef ENABLE_MESSENGER
+    #include "app/messenger.h"
+#endif
 #ifdef ENABLE_USB
 #include "driver/vcp.h"
 #endif
@@ -113,6 +116,10 @@ void Main(void)
     RADIO_SelectVfos();
 
     RADIO_SetupRegisters(true);
+
+#ifdef ENABLE_MESSENGER
+    MSG_Init();
+#endif
 
     for (unsigned int i = 0; i < ARRAY_SIZE(gBatteryVoltages); i++)
         BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[i], &gBatteryCurrent);

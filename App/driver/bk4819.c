@@ -1850,3 +1850,9 @@ void BK4819_PlayDTMFEx(bool bLocalLoopback, char Code)
 
     BK4819_ExitTxMute();
 }
+
+void BK4819_MuteMic(void)
+{
+    const uint16_t reg30 = BK4819_ReadRegister(BK4819_REG_30);
+    BK4819_WriteRegister(BK4819_REG_30, reg30 & ~(1u << 2));
+}

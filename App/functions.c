@@ -96,6 +96,15 @@ void FUNCTION_Foreground(const FUNCTION_Type_t PreviousFunction)
         ST7565_FixInterfGlitch();
         gVFO_RSSI_bar_level[0] = 0;
         gVFO_RSSI_bar_level[1] = 0;
+
+#ifdef ENABLE_MESSENGER
+        // FUNCTION_Transmit() tears down the FSK chain (REG_58/59/70/72) so mic
+        // audio reaches the modulator during voice TX. Re-arm messenger RX now
+        // that TX is over, otherwise reception stays dead after any transmit
+        // until the next channel change (K1 TX works, K1 RX silent).
+        if (gEeprom.MESSENGER_CONFIG.data.receive)
+            MSG_EnableRX(true);
+#endif
     } else if (PreviousFunction != FUNCTION_RECEIVE) {
         return;
     }
@@ -143,6 +152,24 @@ void FUNCTION_Transmit()
 {
     // if DTMF is enabled when TX'ing, it changes the TX audio filtering !! .. 1of11
     BK4819_DisableDTMF();
+
+#ifdef ENABLE_MESSENGER
+    // While messenger RX is enabled, MSG_ConfigureFSK/MSG_EnableRX leave the
+    // whole FSK chain engaged and the chip stays latched on the FSK path
+    // instead of normal FM modulation: the carrier comes up but mic audio
+    // never reaches the modulator (silent carrier with MsgRX on; mic is fine
+    // with MsgRX off). Clearing only REG_58/REG_70 wasn't enough, so tear the
+    // full FSK chain down before TX: REG_59 (FSK control/RX-enable), REG_72
+    // (Tone2 generator that feeds the modulator) and REG_58/REG_70.
+    // RADIO_SetupRegisters() re-applies the FSK config via MSG_EnableRX(true)
+    // once TX ends.
+    if (gEeprom.MESSENGER_CONFIG.data.receive) {
+        BK4819_WriteRegister(BK4819_REG_59, 0);
+        BK4819_WriteRegister(BK4819_REG_58, 0);
+        BK4819_WriteRegister(BK4819_REG_72, 0);
+        BK4819_WriteRegister(BK4819_REG_70, 0);
+    }
+#endif
 
 #ifdef ENABLE_DTMF_CALLING
     // clear the DTMF RX buffer

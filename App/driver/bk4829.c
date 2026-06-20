@@ -428,7 +428,10 @@ int8_t BK4819_GetRxGain_dB(void)
 int16_t BK4819_GetRSSI_dBm(void)
 {
     uint16_t rssi = BK4819_GetRSSI();
-    return (rssi / 2) - 160;// - BK4819_GetRxGain_dB();
+    // empirical calibration: the BK4829 reads RSSI ~24dB hotter than the
+    // BK4819 for the same RF level (measured -83dBm on K1 vs -107dBm on K5
+    // for the same signal)
+    return (rssi / 2) - 160 - 24;// - BK4819_GetRxGain_dB();
 }
 
 void BK4819_ToggleGpioOut(BK4819_GPIO_PIN_t Pin, bool bSet)
@@ -994,6 +997,11 @@ void BK4819_DisableVox(void)
 
 void BK4819_DisableDTMF(void)
 {
+    // REG_21 (see BK4819_EnableDTMF) is also part of the TX audio filter
+    // setup, not just DTMF decode - keep it at its known-good value even
+    // when the decoder itself (REG_24) is disabled, otherwise it's left at
+    // its post-reset default and TX mic audio breaks (1of11).
+    BK4819_WriteRegister(BK4819_REG_21, 0x06D8);        // 0000 0110 1101 1000
     BK4819_WriteRegister(BK4819_REG_24, 0);
 }
 
@@ -1877,4 +1885,25 @@ void BK4819_PlayDTMFEx(bool bLocalLoopback, char Code)
     BK4819_PlayDTMF(Code);
 
     BK4819_ExitTxMute();
+
+
+}
+void BK4819_FskClearFifo(void) {
+    const uint16_t fsk_reg59 = BK4819_ReadRegister(BK4819_REG_59);
+    BK4819_WriteRegister(BK4819_REG_59, (1u << 15) | (1u << 14) | fsk_reg59);
+}
+
+void BK4819_FskEnableRx(void) {
+    const uint16_t fsk_reg59 = BK4819_ReadRegister(BK4819_REG_59);
+    BK4819_WriteRegister(BK4819_REG_59, (1u << 12) | fsk_reg59);
+}
+
+void BK4819_FskEnableTx(void) {
+    const uint16_t fsk_reg59 = BK4819_ReadRegister(BK4819_REG_59);
+    BK4819_WriteRegister(BK4819_REG_59, (1u << 11) | fsk_reg59);
+}
+
+void BK4819_MuteMic(void) {
+    const uint16_t reg30 = BK4819_ReadRegister(BK4819_REG_30);
+    BK4819_WriteRegister(BK4819_REG_30, reg30 & ~(1u << 2));
 }

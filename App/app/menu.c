@@ -23,6 +23,9 @@
 #include "app/generic.h"
 #include "app/menu.h"
 #include "app/scanner.h"
+#ifdef ENABLE_MESSENGER
+    #include "app/messenger.h"
+#endif
 #include "audio.h"
 #include "board.h"
 #include "driver/backlight.h"
@@ -221,6 +224,13 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             //*pMin = 0;
             *pMax = ARRAY_SIZE(gSubMenu_RX_TX) - 1;
             break;
+
+#if defined(ENABLE_FEAT_F4HWN) && defined(ENABLE_FEAT_F4HWN_LOGO_SAV)
+        case MENU_SET_SAV:
+            //*pMin = 0;
+            *pMax = SET_SAV_LEN - 1;
+            break;
+#endif
 
         #ifndef ENABLE_FEAT_F4HWN
             #ifdef ENABLE_AM_FIX
@@ -484,6 +494,19 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             *pMax = vol_max;
             break;
         }
+
+#ifdef ENABLE_MESSENGER
+        case MENU_MSG_RX:
+        case MENU_MSG_ACK:
+#ifdef ENABLE_ENCRYPTION
+        case MENU_MSG_ENC:
+#endif
+            *pMax = 1;
+            break;
+        case MENU_MSG_MOD:
+            *pMax = 2;
+            break;
+#endif
 
         default:
             return -1;
@@ -1030,10 +1053,33 @@ void MENU_AcceptSetting(void)
         case MENU_SET_TMR:
             gSetting_set_tmr = gSubMenuSelection;
             break;
+#ifdef ENABLE_FEAT_F4HWN_LOGO_SAV
+        case MENU_SET_SAV:
+            gSetting_set_sav = gSubMenuSelection;
+            break;
+#endif
         case MENU_TX_LOCK:
             gTxVfo->TX_LOCK = gSubMenuSelection;
             gRequestSaveChannel       = 1;
             return;
+#endif
+
+#ifdef ENABLE_MESSENGER
+        case MENU_MSG_RX:
+            gEeprom.MESSENGER_CONFIG.data.receive = gSubMenuSelection;
+            MSG_EnableRX(gEeprom.MESSENGER_CONFIG.data.receive);
+            break;
+        case MENU_MSG_ACK:
+            gEeprom.MESSENGER_CONFIG.data.ack = gSubMenuSelection;
+            break;
+        case MENU_MSG_MOD:
+            gEeprom.MESSENGER_CONFIG.data.modulation = gSubMenuSelection;
+            break;
+#ifdef ENABLE_ENCRYPTION
+        case MENU_MSG_ENC:
+            gEeprom.MESSENGER_CONFIG.data.encrypt = gSubMenuSelection;
+            break;
+#endif
 #endif
     }
 
@@ -1497,9 +1543,31 @@ void MENU_ShowCurrentSetting(void)
         case MENU_SET_TMR:
             gSubMenuSelection = gSetting_set_tmr;
             break;
+#ifdef ENABLE_FEAT_F4HWN_LOGO_SAV
+        case MENU_SET_SAV:
+            gSubMenuSelection = gSetting_set_sav;
+            break;
+#endif
         case MENU_TX_LOCK:
             gSubMenuSelection = gTxVfo->TX_LOCK;
             break;
+#endif
+
+#ifdef ENABLE_MESSENGER
+        case MENU_MSG_RX:
+            gSubMenuSelection = gEeprom.MESSENGER_CONFIG.data.receive;
+            break;
+        case MENU_MSG_ACK:
+            gSubMenuSelection = gEeprom.MESSENGER_CONFIG.data.ack;
+            break;
+        case MENU_MSG_MOD:
+            gSubMenuSelection = gEeprom.MESSENGER_CONFIG.data.modulation;
+            break;
+#ifdef ENABLE_ENCRYPTION
+        case MENU_MSG_ENC:
+            gSubMenuSelection = gEeprom.MESSENGER_CONFIG.data.encrypt;
+            break;
+#endif
 #endif
 
         default:
@@ -2076,7 +2144,7 @@ static void MENU_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
 
     if (!gIsInSubMenu)
     {
-        gMenuCursor = NUMBER_AddWithWraparound(gMenuCursor, -Direction, 0, gMenuListCount - 1);
+        gMenuCursor = NUMBER_AddWithWraparound(gMenuCursor, Direction, 0, gMenuListCount - 1);
 
         gFlagRefreshSetting = true;
 
@@ -2189,7 +2257,7 @@ void MENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             break;
         case KEY_UP:
         case KEY_DOWN:
-            MENU_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? 1 : -1);
+            MENU_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? -1 : 1);
             break;
         case KEY_EXIT:
             MENU_Key_EXIT(bKeyPressed, bKeyHeld);

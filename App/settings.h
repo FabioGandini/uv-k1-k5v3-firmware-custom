@@ -23,6 +23,9 @@
 #include "frequencies.h"
 #include <helper/battery.h>
 #include "radio.h"
+#ifdef ENABLE_MESSENGER
+    #include "app/messenger.h"
+#endif
 #include <driver/backlight.h>
 
 enum POWER_OnDisplayMode_t {
@@ -133,6 +136,9 @@ enum ACTION_OPT_t {
 #endif
 #ifdef ENABLE_FEAT_F4HWN_BEAM
     ACTION_OPT_BEAM,
+#endif
+#ifdef ENABLE_MESSENGER
+    ACTION_OPT_MESSENGER,
 #endif
     ACTION_OPT_LEN
 };
@@ -309,6 +315,16 @@ typedef struct {
     uint8_t               S0_LEVEL;
     uint8_t               S9_LEVEL;
 #endif
+#ifdef ENABLE_MESSENGER
+    MessengerConfig       MESSENGER_CONFIG;
+    // station callsign auto-prepended to outgoing messages for ID compliance
+    // (6 chars callsign + 2 chars radio id, e.g. "IU2VTM01"); set via CHIRP or
+    // the radio menu, stored at EEPROM 0xA170
+    char                  CALLSIGN[8];
+#endif
+#ifdef ENABLE_ENCRYPTION
+    char                  ENC_KEY[16];
+#endif
 } EEPROM_Config_t;
 
 extern EEPROM_Config_t gEeprom;
@@ -350,6 +366,9 @@ void SETTINGS_SaveChannel(uint16_t Channel, uint8_t VFO, const VFO_Info_t *pVFO,
 void SETTINGS_SaveBatteryCalibration(const uint16_t * batteryCalibration);
 void SETTINGS_UpdateChannel(uint16_t channel, const VFO_Info_t *pVFO, bool keep, bool check, bool save);
 void SETTINGS_WriteBuildOptions(void);
+#ifdef ENABLE_MESSENGER
+void SETTINGS_SaveCallsign(void);
+#endif
 #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
     void SETTINGS_WriteCurrentState(void);
 #endif

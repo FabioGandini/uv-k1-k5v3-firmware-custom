@@ -37,7 +37,9 @@ enum GUI_DisplayType_t
 #ifdef ENABLE_REGA
     DISPLAY_REGA,
 #endif
-
+#ifdef ENABLE_MESSENGER
+    DISPLAY_MSG,
+#endif
     DISPLAY_N_ELEM,
     DISPLAY_INVALID = 0xFFu
 };

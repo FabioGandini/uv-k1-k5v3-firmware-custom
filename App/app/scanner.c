@@ -278,7 +278,7 @@ void SCANNER_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             break;
         case KEY_UP:
         case KEY_DOWN:
-            SCANNER_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? 1 : -1);
+            SCANNER_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? -1 : 1);
             break;
         case KEY_EXIT:
             SCANNER_Key_EXIT(bKeyPressed, bKeyHeld);
@@ -506,8 +506,8 @@ void SCANNER_TimeSlice500ms(void)
     if (SCANNER_IsScanning() && gScannerSaveState == SCAN_SAVE_NO_PROMPT && gScanCssState < SCAN_CSS_STATE_FOUND) {
         gScanProgressIndicator++;
 #ifndef ENABLE_NO_CODE_SCAN_TIMEOUT
-        if (gScanProgressIndicator > 32) {
-            if (gScanCssState == SCAN_CSS_STATE_SCANNING && !gScanSingleFrequency)
+        if (gScanCssState == SCAN_CSS_STATE_SCANNING && gScanProgressIndicator > 32) {
+            if (!gScanSingleFrequency)
                 gScanCssState = SCAN_CSS_STATE_FOUND;
             else
                 gScanCssState = SCAN_CSS_STATE_FAILED;

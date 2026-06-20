@@ -1,0 +1,91 @@
+diff --git a/App/app/aircopy.c b/App/app/aircopy.c
+index 884ff90..f1fef53 100644
+--- a/App/app/aircopy.c
++++ b/App/app/aircopy.c
+@@ -413,7 +413,7 @@ void AIRCOPY_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
+         break;
+     case KEY_UP:
+     case KEY_DOWN:
+-        AIRCOPY_Key_UP_DOWN(Key == KEY_UP ? 1 : -1);
++        AIRCOPY_Key_UP_DOWN(Key == KEY_UP ? -1 : 1);
+         break;
+     case KEY_PTT:
+         break;
+diff --git a/App/app/fm.c b/App/app/fm.c
+index 0842ba7..ef589fa 100644
+--- a/App/app/fm.c
++++ b/App/app/fm.c
+@@ -579,7 +579,7 @@ void FM_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
+             break;
+         case KEY_UP:
+         case KEY_DOWN:
+-            Key_UP_DOWN(state, Key == KEY_UP ? 1 : -1);
++            Key_UP_DOWN(state, Key == KEY_UP ? -1 : 1);
+             break;
+         case KEY_EXIT:
+             Key_EXIT(state);
+diff --git a/App/app/main.c b/App/app/main.c
+index 4d8938d..faaf00d 100644
+--- a/App/app/main.c
++++ b/App/app/main.c
+@@ -316,14 +316,14 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
+                 bool isKeyUp = (Key == KEY_UP);
+ 
+                 if (gScanStateDir != SCAN_OFF) {
+-                    RADIO_NextValidList(isKeyUp ? 1 : -1);
++                    RADIO_NextValidList(isKeyUp ? -1 : 1);
+                     UI_MAIN_NotifyScanProgressDataChanged();
+                 } else {
+                     // Adjust squelch: UP increments, DOWN decrements
+                     if (gSquelchLevelOriginal == 10)
+                         gSquelchLevelOriginal =  gEeprom.SQUELCH_LEVEL;
+ 
+-                    if (isKeyUp) {
++                    if (!isKeyUp) {
+                         if (gEeprom.SQUELCH_LEVEL < 9) gEeprom.SQUELCH_LEVEL++;
+                     } else {
+                         if (gEeprom.SQUELCH_LEVEL > 0) gEeprom.SQUELCH_LEVEL--;
+@@ -1067,7 +1067,7 @@ void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
+             break;
+         case KEY_UP:
+         case KEY_DOWN:
+-            MAIN_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? 1 : -1);
++            MAIN_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? -1 : 1);
+             break;
+         case KEY_EXIT:
+             MAIN_Key_EXIT(bKeyPressed, bKeyHeld);
+diff --git a/App/app/menu.c b/App/app/menu.c
+index 55c1f7a..5f5694f 100644
+--- a/App/app/menu.c
++++ b/App/app/menu.c
+@@ -2076,7 +2076,7 @@ static void MENU_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
+ 
+     if (!gIsInSubMenu)
+     {
+-        gMenuCursor = NUMBER_AddWithWraparound(gMenuCursor, -Direction, 0, gMenuListCount - 1);
++        gMenuCursor = NUMBER_AddWithWraparound(gMenuCursor, Direction, 0, gMenuListCount - 1);
+ 
+         gFlagRefreshSetting = true;
+ 
+@@ -2189,7 +2189,7 @@ void MENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
+             break;
+         case KEY_UP:
+         case KEY_DOWN:
+-            MENU_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? 1 : -1);
++            MENU_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? -1 : 1);
+             break;
+         case KEY_EXIT:
+             MENU_Key_EXIT(bKeyPressed, bKeyHeld);
+diff --git a/App/app/scanner.c b/App/app/scanner.c
+index 617291a..7b6c36e 100644
+--- a/App/app/scanner.c
++++ b/App/app/scanner.c
+@@ -278,7 +278,7 @@ void SCANNER_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
+             break;
+         case KEY_UP:
+         case KEY_DOWN:
+-            SCANNER_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? 1 : -1);
++            SCANNER_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? -1 : 1);
+             break;
+         case KEY_EXIT:
+             SCANNER_Key_EXIT(bKeyPressed, bKeyHeld);

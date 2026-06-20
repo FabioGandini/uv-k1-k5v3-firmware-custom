@@ -35,6 +35,10 @@
 #include "app/breakout.h"
 #endif
 
+#ifdef ENABLE_SPECTRUM_K5
+#include "app/spectrum_k5.h"
+#endif
+
 #include "audio.h"
 #include "board.h"
 #include "driver/bk4819.h"
@@ -262,7 +266,14 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
             break;
 
         case KEY_7:
-#ifdef ENABLE_FEAT_F4HWN_GAME
+#if defined(ENABLE_SPECTRUM_K5)
+            // F+7: kamilsss655 spectrum analyzer (takes the slot of the
+            // breakout game); the F4HWN bandscope stays on F+5
+            if (!beep) {
+                APP_RunSpectrumK5();
+                gRequestDisplayScreen = DISPLAY_MAIN;
+            } else {
+#elif defined(ENABLE_FEAT_F4HWN_GAME)
             if (!beep) {
                 APP_RunBreakout();
             } else {
@@ -272,7 +283,7 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
 //#else
 //              toggle_chan_scanlist();
 #endif
-#ifdef ENABLE_FEAT_F4HWN_GAME
+#if defined(ENABLE_SPECTRUM_K5) || defined(ENABLE_FEAT_F4HWN_GAME)
             }
 #endif
 
@@ -316,14 +327,14 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
                 bool isKeyUp = (Key == KEY_UP);
 
                 if (gScanStateDir != SCAN_OFF) {
-                    RADIO_NextValidList(isKeyUp ? 1 : -1);
+                    RADIO_NextValidList(isKeyUp ? -1 : 1);
                     UI_MAIN_NotifyScanProgressDataChanged();
                 } else {
                     // Adjust squelch: UP increments, DOWN decrements
                     if (gSquelchLevelOriginal == 10)
                         gSquelchLevelOriginal =  gEeprom.SQUELCH_LEVEL;
 
-                    if (isKeyUp) {
+                    if (!isKeyUp) {
                         if (gEeprom.SQUELCH_LEVEL < 9) gEeprom.SQUELCH_LEVEL++;
                     } else {
                         if (gEeprom.SQUELCH_LEVEL > 0) gEeprom.SQUELCH_LEVEL--;
@@ -932,10 +943,6 @@ static void MAIN_Key_STAR(bool bKeyPressed, bool bKeyHeld)
 
 static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
 {
-    if (!gEeprom.SET_NAV) {
-        Direction = -Direction;
-    }
-
 #ifdef ENABLE_FEAT_F4HWN // Set Squelch F + UP or Down
     if(gWasFKeyPressed) {
         processFKeyFunction(Direction == 1 ? KEY_UP : KEY_DOWN, true);
@@ -1067,7 +1074,7 @@ void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             break;
         case KEY_UP:
         case KEY_DOWN:
-            MAIN_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? 1 : -1);
+            MAIN_Key_UP_DOWN(bKeyPressed, bKeyHeld, Key == KEY_UP ? -1 : 1);
             break;
         case KEY_EXIT:
             MAIN_Key_EXIT(bKeyPressed, bKeyHeld);

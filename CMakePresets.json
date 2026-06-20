@@ -21,6 +21,11 @@
                 "ENABLE_TX1750": true,
                 "ENABLE_PWRON_PASSWORD": false,
                 "ENABLE_DTMF_CALLING": false,
+		"ENABLE_MESSENGER": true,
+                "ENABLE_MESSENGER_DELIVERY_NOTIFICATION": true,
+                "ENABLE_MESSENGER_FSK_MUTE": true,
+                "ENABLE_MESSENGER_NOTIFICATION": true,
+                "ENABLE_ENCRYPTION": true,
                 "ENABLE_FLASHLIGHT": true,
                 "ENABLE_SPECTRUM": false,
                 "ENABLE_BIG_FREQ": true,
@@ -34,7 +39,7 @@
                 "ENABLE_BOOT_BEEPS": false,
                 "ENABLE_SHOW_CHARGE_LEVEL": false,
                 "ENABLE_REVERSE_BAT_SYMBOL": false,
-                "ENABLE_NO_CODE_SCAN_TIMEOUT": true,
+                "ENABLE_NO_CODE_SCAN_TIMEOUT": false,
                 "ENABLE_SQUELCH_MORE_SENSITIVE": true,
                 "ENABLE_FASTER_CHANNEL_SCAN": true,
                 "ENABLE_RSSI_BAR": true,
@@ -70,21 +75,29 @@
                 "ENABLE_FEAT_F4HWN_MEM": false,
                 "ENABLE_FEAT_F4HWN_SCAN_PROGRESS": false,
                 "ENABLE_FEAT_F4HWN_SCAN_FASTER": false,
+                "ENABLE_FEAT_F4HWN_SCAN_RSSI": false,
+                "ENABLE_FEAT_F4HWN_SCAN_SUBAUDIBLE": false,
                 "ENABLE_FEAT_F4HWN_BEAM": false,
                 "ENABLE_FEAT_F4HWN_LOGO": false,
+                "ENABLE_FEAT_F4HWN_LOGO_SAV": false,
                 "ENABLE_AGC_SHOW_DATA": false,
                 "ENABLE_UART_RW_BK_REGS": false,
                 "ENABLE_SWD": false,
                 "VERSION_STRING_1": "v0.22",
-                "VERSION_STRING_2": "v5.5.0"
+                "VERSION_STRING_2": "v5.6.0"
             }
         },
         {
             "name": "Custom",
             "inherits": "default",
             "cacheVariables": {
-                "EDITION_STRING": "Custom",
-                "TARGET": "f4hwn.custom"
+                "ENABLE_SPECTRUM": true,
+                "ENABLE_SPECTRUM_K5": true,
+                "ENABLE_AIRCOPY": true,
+                "AUTHOR_STRING_2": "IU2VTM",
+                "VERSION_STRING_2": "2.0",
+                "EDITION_STRING": "Kismet",
+                "TARGET": "iu2vtm"
             }
         },
         {
@@ -198,10 +211,13 @@
                 "ENABLE_FEAT_F4HWN_AUDIO_SCOPE": true,
                 "ENABLE_FEAT_F4HWN_SCAN_PROGRESS": true,
                 "ENABLE_FEAT_F4HWN_SCAN_FASTER": true,
+                "ENABLE_FEAT_F4HWN_SCAN_RSSI": true,
+                "ENABLE_FEAT_F4HWN_SCAN_SUBAUDIBLE": true,
                 "ENABLE_FEAT_F4HWN_BEAM": true,
                 "ENABLE_FEAT_F4HWN_QRCODE": true,
                 "ENABLE_FEAT_F4HWN_MEM": true,
                 "ENABLE_FEAT_F4HWN_LOGO": true,
+                "ENABLE_FEAT_F4HWN_LOGO_SAV": true,
                 "ENABLE_SWD": true,
                 "EDITION_STRING": "Fusion",
                 "TARGET": "f4hwn.fusion"

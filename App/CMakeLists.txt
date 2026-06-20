@@ -137,6 +137,17 @@ enable_feature(ENABLE_PWRON_PASSWORD
     ui/lock.c
 )
 enable_feature(ENABLE_DTMF_CALLING)
+enable_feature(ENABLE_MESSENGER
+    app/messenger.c
+    ui/messenger.c
+)
+enable_feature(ENABLE_ENCRYPTION
+    helper/crypto.c
+    external/chacha/chacha.c
+)
+enable_feature(ENABLE_MESSENGER_DELIVERY_NOTIFICATION)
+enable_feature(ENABLE_MESSENGER_FSK_MUTE)
+enable_feature(ENABLE_MESSENGER_NOTIFICATION)
 enable_feature(ENABLE_FLASHLIGHT
     app/flashlight.c
 )
@@ -145,6 +156,9 @@ enable_feature(ENABLE_FLASHLIGHT
 
 enable_feature(ENABLE_SPECTRUM
     app/spectrum.c
+)
+enable_feature(ENABLE_SPECTRUM_K5
+    app/spectrum_k5.c
 )
 enable_feature(ENABLE_BIG_FREQ)
 enable_feature(ENABLE_SMALL_BOLD)
@@ -197,6 +211,8 @@ enable_feature(ENABLE_FEAT_F4HWN_INV)
 enable_feature(ENABLE_FEAT_F4HWN_CTR)
 enable_feature(ENABLE_FEAT_F4HWN_SCAN_PROGRESS)
 enable_feature(ENABLE_FEAT_F4HWN_SCAN_FASTER)
+enable_feature(ENABLE_FEAT_F4HWN_SCAN_RSSI)
+enable_feature(ENABLE_FEAT_F4HWN_SCAN_SUBAUDIBLE)
 enable_feature(ENABLE_FEAT_F4HWN_RESCUE_OPS)
 enable_feature(ENABLE_FEAT_F4HWN_VOL)
 enable_feature(ENABLE_FEAT_F4HWN_AUDIO)
@@ -215,6 +231,11 @@ if(ENABLE_FEAT_F4HWN_BEAM AND NOT ENABLE_AIRCOPY)
 endif()
 enable_feature(ENABLE_FEAT_F4HWN_QRCODE)
 enable_feature(ENABLE_FEAT_F4HWN_LOGO)
+enable_feature(ENABLE_FEAT_F4HWN_LOGO_SAV)
+
+if(ENABLE_FEAT_F4HWN_LOGO_SAV AND NOT ENABLE_FEAT_F4HWN_LOGO)
+    message(FATAL_ERROR "ENABLE_FEAT_F4HWN_LOGO_SAV requires ENABLE_FEAT_F4HWN_LOGO.")
+endif()
 
 # ---- DEBUGGING ----
 
