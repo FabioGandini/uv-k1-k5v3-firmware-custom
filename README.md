@@ -25,7 +25,7 @@ to use it — followed by the full button map and credits.
 
 ---
 
-## ✉️ 1. Text Messenger — send little text messages
+## ✉️ 1. Text Messenger — send little text messages (AFSK 1200)
 
 **What it is (simply):** your radio can send and receive short text messages
 (up to ~30 characters), like a walkie-talkie that can also "SMS". Two radios on
@@ -43,19 +43,7 @@ the **same frequency** with the messenger turned on can chat.
 **Important:** for two radios to understand each other they must use the **same
 "modulation" (speed)** and the **same frequency**.
 
-## 🐢🐇 2. Modulation / speed (FSK450 / FSK700 / AFSK1200)
 
-**What it is (simply):** the "how fast we talk" setting. Slower = more reliable
-when the signal is weak; faster = quicker but needs a better signal.
-
-- **FSK450** — slowest, most robust (bad conditions)
-- **FSK700** — medium
-- **AFSK1200** — fastest, uses the radio chip's built-in 1200-baud modem (good
-  conditions). On the UV-K1 this mode is tuned to use the rock-solid factory
-  "aircopy" radio settings, so it is the most reliable choice between two UV-K1.
-
-**Both radios must be set to the same one** (menu: **MsgMod**). This is also how
-a UV-K1 talks to a kamilsss655 UV-K5: pick the same modulation on both.
 
 ## ✅ 3. Delivery confirmation (ACK)
 
