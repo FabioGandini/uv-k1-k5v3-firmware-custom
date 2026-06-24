@@ -509,22 +509,13 @@ void MSG_CheckRxTimeout(void) {
 			BK4819_SetAF(BK4819_AF_FM);
 	}
 
-	// preventive: holding AF=FM continuously while the squelch is closed
-	// (idle, no real signal) lets the BK4829's AGC drift its gain upward
-	// over time, demodulating noise as if it were a signal (seen as
-	// spurious DTMF tone detections and, eventually, RSSI rising past the
-	// squelch-open threshold). Periodically kick the AGC back to its
-	// default operating point while genuinely idle.
-	if (gEeprom.MESSENGER_CONFIG.data.receive &&
-	    gCurrentFunction == FUNCTION_FOREGROUND &&
-	    msgStatus == READY && !g_SquelchLost) {
-		static uint16_t agcKick10ms = 0;
-		if (++agcKick10ms >= 100) {
-			agcKick10ms = 0;
-			BK4819_SetAGC(false);
-			BK4819_SetAGC(true);
-		}
-	}
+	// NOTE: an earlier attempt periodically "kicked" the AGC here
+	// (SetAGC(false)/SetAGC(true) every 1s) on the theory that holding AF=FM
+	// let the AGC gain drift and trip the squelch. That did NOT fix the
+	// stuck-open squelch and is gone now: GOGUFW runs the messenger on the
+	// same BK4829 and never touches the AGC at all. Toggling the AGC fix-mode
+	// once a second perturbs the very RSSI the squelch is comparing against,
+	// so it was a cause of instability, not a cure. Leave the AGC alone.
 
 	// recovery: BK4819_REG_02's sqlLost bit is level-triggered off RSSI vs
 	// the REG_78 thresholds. If the squelch reports "open" continuously for
