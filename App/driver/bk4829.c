@@ -223,9 +223,6 @@ static uint16_t BK4819_ReadU16(void)
     return Value;
 }
 
-static uint16_t reg_30_cache = 0xFFFF;
-static uint16_t reg_47_cache = 0xFFFF;
-
 uint16_t BK4819_ReadRegister(BK4819_REGISTER_t Register)
 {
     uint16_t Value;
@@ -243,29 +240,19 @@ uint16_t BK4819_ReadRegister(BK4819_REGISTER_t Register)
     SCL_Set();
     SDA_Set();
 
-    if (Register == BK4819_REG_30)
-        reg_30_cache = Value;
-    else if (Register == BK4819_REG_47)
-        reg_47_cache = Value;
-
     return Value;
 }
 
+// NB: no REG_30/REG_47 write-cache here. An upstream optimization (v5.6.0,
+// "cut SPI overhead" for spectrum sweeps) skipped a write whenever the value
+// matched a software cache. That is unsound for REG_30: bit15 VCO_CALIB is
+// self-clearing in hardware, so after any write the hardware value diverges
+// from the cache permanently, and writes have side effects (VCO recalibration
+// / DSP restart) where the write itself matters, not just the value. The cache
+// is reset only by an MCU reset (power-cycle) - the exact signature of the
+// "RX/squelch stuck open, only power-cycle recovers" bug. Always write.
 void BK4819_WriteRegister(BK4819_REGISTER_t Register, uint16_t Data)
 {
-    if (Register == BK4819_REG_30)
-    {
-        if (Data == reg_30_cache)
-            return;
-        reg_30_cache = Data;
-    }
-    else if (Register == BK4819_REG_47)
-    {
-        if (Data == reg_47_cache)
-            return;
-        reg_47_cache = Data;
-    }
-
     CS_Release();
     SCL_Reset();
     SHORT_DELAY();
