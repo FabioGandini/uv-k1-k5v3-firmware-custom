@@ -440,8 +440,13 @@ void MSG_StorePacket(const uint16_t interrupt_bits) {
 	if (rx_sync) {
 		#ifdef ENABLE_MESSENGER_FSK_MUTE
 			// prevent listening to fsk data and squelch (kamilsss655)
-			// CTCSS codes seem to false trigger the rx_sync
-			if(gCurrentCodeType == CODE_TYPE_OFF)
+			// CTCSS codes seem to false trigger the rx_sync.
+			// Only mute when the analog squelch is closed: on the BK4829 the
+			// AFSK demod false-triggers rx_sync on real voice/noise, and muting
+			// a genuinely-open signal both chops live audio and is the kind of
+			// squelch-path interference GOGUFW avoids (it never touches the FSK
+			// path while the channel is busy).
+			if(gCurrentCodeType == CODE_TYPE_OFF && !g_SquelchLost)
 				AUDIO_AudioPathOff();
 		#endif
 		gFSKWriteIndex = 0;
@@ -471,7 +476,11 @@ void MSG_StorePacket(const uint16_t interrupt_bits) {
 		gMsgLastRxRssiDbm = BK4819_GetRSSI_dBm();
 		// turn off green LED
 		BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
-		g_SquelchLost = false;
+		// do NOT clear g_SquelchLost here: the hardware sqlLost/sqlFound
+		// interrupts own the squelch flag. Forcing it false could desync the
+		// software squelch state from a still-open analog signal (sqlLost only
+		// re-fires on a closed->open edge), which is the residual stuck-open
+		// seen after a real RX. GOGUFW never writes g_SquelchLost.
 		BK4819_FskClearFifo();
 		BK4819_FskEnableRx();
 		msgStatus = READY;
@@ -520,11 +529,11 @@ void MSG_CheckRxTimeout(void) {
 		gFSKWriteIndex = 0;
 		BK4819_FskClearFifo();
 		BK4819_FskEnableRx();
-
-		if (g_SquelchLost) {
-			g_SquelchLost = false;
-			BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
-		}
+		// recovery only resets the messenger's own FSK state; the squelch flag
+		// and green LED stay owned by the hardware sqlLost/sqlFound interrupts.
+		// Forcing g_SquelchLost=false here could clear a legitimately-open
+		// squelch mid-signal (a spurious rx_sync on a real >1s RX), desyncing
+		// software/hardware squelch - the residual stuck-open-after-RX bug.
 	}
 }
 
