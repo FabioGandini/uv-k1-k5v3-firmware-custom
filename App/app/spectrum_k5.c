@@ -613,12 +613,38 @@ static void ToggleAudio(bool on) {
   }
 }
 
+// CHANNEL_MODE: retune the demodulator to the listened channel's stored
+// modulation (AM/FM/SSB) so AM memory channels are actually demodulated as AM
+// instead of being forced to the launch-time modulation. Frequency-mode scan
+// keeps the user-selected modulation untouched.
+static void ApplyChannelModulation(void) {
+  if (appMode != CHANNEL_MODE)
+    return;
+  if (peak.i < 1 || peak.i > scanChannelsCount)
+    return;
+
+  uint32_t chFreq;
+  ModulationMode_t chMod;
+  if (!SETTINGS_FetchChannelScanInfo(scanChannel[peak.i - 1], &chFreq, &chMod))
+    return;
+
+  if (chMod != settings.modulationType) {
+    settings.modulationType = chMod;
+    RADIO_SetModulation(chMod);
+    BK4819_InitAGC(chMod != MODULATION_FM);
+    redrawStatus = true;
+  }
+}
+
 static void ToggleRX(bool on) {
   isListening = on;
 
   // turn on green led only if screen brightness is over 7
   if (gEeprom.BACKLIGHT_MAX > 7)
     BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, on);
+
+  if (on)
+    ApplyChannelModulation();
 
   ToggleAudio(on);
   ToggleAFDAC(on);
